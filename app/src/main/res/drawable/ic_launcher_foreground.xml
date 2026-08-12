@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Wallet Container -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M30,36 h48 c3.3,0 6,2.7 6,6 v30 c0,3.3 -2.7,6 -6,6 H30 c-3.3,0 -6,-2.7 -6,-6 V42 c0,-3.3 2.7,-6 6,-6 z" />
+    <!-- Wallet Flap / Accent -->
+    <path
+        android:fillColor="#059669"
+        android:pathData="M24,42 c0,-3.3 2.7,-6 6,-6 h48 v8 H24 z" />
+    <!-- Receipt Card popping out -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,26 h32 c1.1,0 2,0.9 2,2 v16 H36 V28 c0,-1.1 0.9,-2 2,-2 z" />
+    <!-- Receipt Lines -->
+    <path
+        android:fillColor="#6EE7B7"
+        android:pathData="M42,30 h24 v2 H42 z M42,34 h16 v2 H42 z M42,38 h20 v2 H42 z" />
+    <!-- Rupee / Coin badge -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M66,54 A8,8 0 1 1 65.9,54 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M63,51 h6 v1.5 h-6 z M63,53.5 h6 v1.5 h-4 c-1.1,0 -2,0.9 -2,2 c0,0.8 0.5,1.5 1.2,1.8 l2.8,2.7 h-2.2 l-2.6,-2.5 v-1 h3 h2 v-1 h-3 z" />
+</vector>
