@@ -40,7 +40,6 @@ object PdfTransactionParser {
             pfd.close()
 
             val fileName = getFileName(context, uri)
-            val statementSource = "Slice Bank Statement"
 
             // Use PDFBox to extract text
             val document = PDDocument.load(tempFile)
@@ -48,7 +47,17 @@ object PdfTransactionParser {
             val extractedText = stripper.getText(document)
             document.close()
 
-            val extractedTransactions = parseTransactionsFromText(extractedText, statementSource)
+            val isGPay = fileName.contains("gpay", ignoreCase = true) || 
+                         fileName.contains("google", ignoreCase = true) || 
+                         extractedText.contains("Google Pay", ignoreCase = true)
+            
+            val statementSource = if (isGPay) "Google Pay Statement" else "Slice Bank Statement"
+
+            val extractedTransactions = if (isGPay) {
+                parseGPayTransactionsFromText(extractedText, statementSource)
+            } else {
+                parseTransactionsFromText(extractedText, statementSource)
+            }
 
             ParseResult.Success(
                 transactions = extractedTransactions,
@@ -59,6 +68,128 @@ object PdfTransactionParser {
         } catch (e: Exception) {
             ParseResult.Error("Failed to parse PDF: ${e.localizedMessage ?: "Unknown error"}")
         }
+    }
+
+    private fun parseGPayTransactionsFromText(text: String, source: String): List<TransactionEntity> {
+        val list = mutableListOf<TransactionEntity>()
+        var seq = 0L
+
+        // GPay Date format: "01 Feb, 2026"
+        val dateRegex = Regex("^\\d{2}\\s+[A-Za-z]{3},\\s+\\d{4}$")
+        val timeRegex = Regex("^\\d{2}:\\d{2}\\s+[AMPM]{2}$")
+        val amountRegex = Regex("^[+-]?(?:₹|Rs\\.?|INR)?\\s*([\\d,]+\\.?\\d*)$")
+
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        var i = 0
+
+        while (i < lines.size) {
+            val line = lines[i]
+            if (dateRegex.matches(line)) {
+                val dateStr = line
+                if (i + 1 < lines.size && timeRegex.matches(lines[i + 1])) {
+                    val timeStr = lines[i + 1]
+                    var j = i + 2
+                    val txLines = mutableListOf<String>()
+                    
+                    // Gather lines until next date or specific footer text
+                    while (j < lines.size) {
+                        val nextLine = lines[j]
+                        if (dateRegex.matches(nextLine)) break
+                        if (nextLine.startsWith("Page ") && nextLine.contains("of")) break
+                        if (nextLine.startsWith("Note: This statement")) break
+                        if (nextLine.startsWith("Powered by")) break
+                        
+                        txLines.add(nextLine)
+                        j++
+                        
+                        // If it's the exact amount line, we can assume it's the end of transaction
+                        if (amountRegex.matches(nextLine)) {
+                            break
+                        }
+                    }
+                    
+                    if (txLines.isNotEmpty()) {
+                        var amountStr = ""
+                        val lastLine = txLines.last()
+                        
+                        if (amountRegex.matches(lastLine)) {
+                            amountStr = lastLine
+                            txLines.removeAt(txLines.size - 1)
+                        } else {
+                            // Amount might be appended to the last line without newline
+                            val possibleAmount = amountRegex.find(lastLine)
+                            if (possibleAmount != null) {
+                                amountStr = possibleAmount.value
+                                txLines[txLines.size - 1] = lastLine.replace(amountStr, "").trim()
+                            }
+                        }
+                        
+                        val upiIndex = txLines.indexOfFirst { it.startsWith("UPI Transaction ID:", ignoreCase = true) || it.startsWith("UPI ID:", ignoreCase = true) }
+                        var title = ""
+                        var upiId = ""
+                        var bankDetails = ""
+                        
+                        if (upiIndex != -1) {
+                            title = txLines.subList(0, upiIndex).joinToString(" ").trim()
+                            upiId = txLines[upiIndex].substringAfter(":").trim()
+                            if (upiIndex + 1 < txLines.size) {
+                                bankDetails = txLines[upiIndex + 1]
+                            }
+                        } else {
+                            title = txLines.joinToString(" ").trim()
+                        }
+                        
+                        if (amountStr.isNotEmpty()) {
+                            val cleanAmt = amountStr.replace("₹", "").replace(",", "").replace("Rs", "").trim()
+                            val amount = cleanAmt.toDoubleOrNull() ?: 0.0
+                            
+                            if (amount > 0) {
+                                var type = "DEBIT"
+                                if (title.contains("Received from", ignoreCase = true) || title.contains("Refund", ignoreCase = true)) {
+                                    type = "CREDIT"
+                                } else if (title.contains("Paid to", ignoreCase = true)) {
+                                    type = "DEBIT"
+                                }
+                                
+                                var payee = title.replace("Paid to", "", ignoreCase = true)
+                                                .replace("Received from", "", ignoreCase = true)
+                                                .trim()
+                                if (payee.isBlank()) payee = title
+                                
+                                val cat = CategoryClassifier.classify(title, payee)
+                                val parsedTs = DateUtils.parseToMillis("$dateStr $timeStr") + seq
+                                
+                                list.add(
+                                    TransactionEntity(
+                                        date = dateStr,
+                                        time = timeStr,
+                                        rawTimestamp = parsedTs,
+                                        title = payee,
+                                        payee = payee,
+                                        amount = amount,
+                                        type = type,
+                                        category = cat,
+                                        upiTransactionId = upiId,
+                                        paymentMethod = if (bankDetails.isNotEmpty()) bankDetails else "Bank Transfer",
+                                        statementSource = source,
+                                        notes = title
+                                    )
+                                )
+                                seq += 1000L
+                            }
+                        }
+                    }
+                    i = j
+                } else {
+                    i++
+                }
+            } else {
+                i++
+            }
+        }
+        
+        list.sortByDescending { it.rawTimestamp }
+        return list
     }
 
     private fun parseTransactionsFromText(text: String, source: String): List<TransactionEntity> {
