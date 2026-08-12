@@ -9,7 +9,6 @@ import com.example.data.TransactionEntity
 import com.example.data.TransactionRepository
 import com.example.util.DateUtils
 import com.example.util.PdfTransactionParser
-import com.example.util.SampleStatementCatalog
 import com.example.util.TransactionDeduplicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -185,50 +184,6 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         }
     }
 
-    fun loadPreloadedStatement(source: String) {
-        viewModelScope.launch {
-            _importState.value = ImportUiState.Loading
-            val baseList = when {
-                source.contains("Annual", ignoreCase = true) ||
-                        source.contains("1,200", ignoreCase = true) ||
-                        source.contains("Full Year", ignoreCase = true) ->
-                    SampleStatementCatalog.getAnnualStatementTransactions()
-
-                source.contains("Slice", ignoreCase = true) ->
-                    SampleStatementCatalog.getSliceStatementTransactions()
-
-                else ->
-                    SampleStatementCatalog.getGooglePayStatementTransactions()
-            }
-            val sortedList = baseList.mapIndexed { index, item ->
-                val calculatedTs = if (item.rawTimestamp > 0) item.rawTimestamp else (DateUtils.parseToMillis(item.date, item.time) + index)
-                item.copy(rawTimestamp = calculatedTs)
-            }.sortedByDescending { it.rawTimestamp }
-
-            val existing = _rawTransactions.first()
-            val (uniqueList, duplicateCount) = TransactionDeduplicator.filterDuplicates(sortedList, existing)
-
-            val isAnnual = source.contains("Annual", ignoreCase = true) || source.contains("1,200", ignoreCase = true) || source.contains("Full Year", ignoreCase = true)
-            val isSlice = source.contains("Slice", ignoreCase = true)
-
-            _importState.value = ImportUiState.ParsedPreview(
-                transactions = sortedList,
-                fileName = when {
-                    isAnnual -> "Full_Year_Annual_Statement_2026.pdf"
-                    isSlice -> "Slice_Statement_Aug_2026.pdf"
-                    else -> "GooglePay_Statement_Jul_2026.pdf"
-                },
-                pageCount = when {
-                    isAnnual -> 120
-                    isSlice -> 6
-                    else -> 19
-                },
-                sourceName = source,
-                duplicateCount = duplicateCount,
-                newCount = uniqueList.size
-            )
-        }
-    }
 
     fun confirmImport(transactions: List<TransactionEntity>, sourceName: String) {
         viewModelScope.launch {
