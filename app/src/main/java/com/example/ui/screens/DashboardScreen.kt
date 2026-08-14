@@ -68,7 +68,20 @@ fun DashboardScreen(
     val summary by viewModel.summaryStats.collectAsState()
     val transactions by viewModel.filteredTransactions.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
-    val recentTransactions = transactions.take(8)
+    
+    val groupedTransactions = androidx.compose.runtime.remember(transactions) {
+        transactions
+            .filter { !it.isSelfTransfer }
+            .groupBy { if (it.tag.isNotBlank()) it.tag else it.category }
+            .mapValues { entry ->
+                val txs = entry.value
+                val totalDebit = txs.filter { it.type == "DEBIT" }.sumOf { it.amount }
+                val totalCredit = txs.filter { it.type == "CREDIT" }.sumOf { it.amount }
+                Pair(totalCredit - totalDebit, txs)
+            }
+            .toList()
+            .sortedByDescending { Math.abs(it.second.first) }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -170,78 +183,6 @@ fun DashboardScreen(
             }
         }
 
-        // Category & Tag Breakdown Card
-        if (summary.categoryTotals.isNotEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Spending by Tags & Categories",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        val totalSpent = if (summary.totalSpent > 0) summary.totalSpent else 1.0
-                        summary.categoryTotals.entries.sortedByDescending { it.value }.take(5).forEach { entry ->
-                            val progress = (entry.value / totalSpent).toFloat().coerceIn(0f, 1f)
-                            val (icon, color) = getTagOrCategoryIconAndColor(entry.key)
-
-                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .background(color.copy(alpha = 0.2f)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = entry.key,
-                                                tint = color,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = entry.key,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White
-                                        )
-                                    }
-                                    Text(
-                                        text = String.format(Locale.US, "₹%,.2f", entry.value),
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                        color = Color(0xFFCBD5E1)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                LinearProgressIndicator(
-                                    progress = { progress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(CircleShape),
-                                    color = color,
-                                    trackColor = Color(0xFF334155)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // Overview Tagged Transactions Header
         item {
             Row(
@@ -260,14 +201,14 @@ fun DashboardScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "Tap any item to view or assign custom tags",
+                        text = "Tap any tag to view transactions",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF64748B)
                     )
                 }
                 TextButton(onClick = onNavigateToTransactions) {
                     Text(
-                        text = "All Transactions (${transactions.size})",
+                        text = "All Transactions",
                         color = Color(0xFF10B981),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -276,7 +217,7 @@ fun DashboardScreen(
         }
 
         // Empty state or transaction list
-        if (recentTransactions.isEmpty()) {
+        if (groupedTransactions.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -308,37 +249,153 @@ fun DashboardScreen(
                             color = Color(0xFF94A3B8),
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (selectedType != "ALL") {
-                            Button(
-                                onClick = { viewModel.setType("ALL") },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                            ) {
-                                Text("Clear Filter", color = Color.Black, fontWeight = FontWeight.Bold)
-                            }
-                        } else {
-                            Button(
-                                onClick = onNavigateToPdfImport,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                            ) {
-                                Text("Import Bank Statement PDF", color = Color.Black, fontWeight = FontWeight.Bold)
-                            }
-                        }
                     }
                 }
             }
         } else {
-            items(recentTransactions, key = { it.id }) { item ->
-                TransactionItemCard(
-                    transaction = item,
-                    onClick = { onSelectTransaction(item) },
-                    showTagView = true
+            items(groupedTransactions, key = { it.first }) { (tagName, data) ->
+                val (netAmount, txs) = data
+                TagGroupCard(
+                    tagName = tagName,
+                    netAmount = netAmount,
+                    transactions = txs,
+                    onSelectTransaction = onSelectTransaction
                 )
             }
         }
 
         item {
             Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+fun TagGroupCard(
+    tagName: String,
+    netAmount: Double,
+    transactions: List<com.example.data.TransactionEntity>,
+    onSelectTransaction: (com.example.data.TransactionEntity) -> Unit
+) {
+    val expanded = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val isIncome = netAmount >= 0 && transactions.any { it.type == "CREDIT" }
+    val isDebit = netAmount < 0 || transactions.all { it.type == "DEBIT" }
+    
+    val amountColor = if (isDebit) com.example.ui.theme.ExpenseRed else com.example.ui.theme.IncomeGreen
+    val amountPrefix = if (isDebit) "-₹" else "+₹"
+    val displayAmount = Math.abs(netAmount)
+    
+    val (icon, iconBg) = getTagOrCategoryIconAndColor(tagName)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { expanded.value = !expanded.value },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Icon
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(iconBg.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = tagName,
+                        tint = iconBg,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Title & Count
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = tagName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "${transactions.size} transactions",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF94A3B8)
+                    )
+                }
+
+                // Amount & Chevron
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$amountPrefix${String.format(java.util.Locale.US, "%,.2f", displayAmount)}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = amountColor
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (expanded.value) "Hide" else "Show",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            }
+
+            // Expanded List
+            androidx.compose.animation.AnimatedVisibility(visible = expanded.value) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0F172A).copy(alpha = 0.5f))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    transactions.forEachIndexed { index, tx ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onSelectTransaction(tx) }
+                                .padding(vertical = 8.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (tx.payee.isNotBlank()) tx.payee else tx.title,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = tx.date,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                            
+                            val txIsDebit = tx.type == "DEBIT"
+                            Text(
+                                text = "${if (txIsDebit) "-₹" else "+₹"}${String.format(java.util.Locale.US, "%,.2f", tx.amount)}",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = if (txIsDebit) ExpenseRed else IncomeGreen
+                            )
+                        }
+                        if (index < transactions.size - 1) {
+                            androidx.compose.material3.HorizontalDivider(color = Color(0xFF334155).copy(alpha = 0.5f), thickness = 1.dp)
+                        }
+                    }
+                }
+            }
         }
     }
 }
