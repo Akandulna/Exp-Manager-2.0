@@ -170,63 +170,7 @@ fun DashboardScreen(
             }
         }
 
-        // Quick Actions Row
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onNavigateToPdfImport,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("action_import_pdf_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PictureAsPdf,
-                        contentDescription = "Import PDF",
-                        tint = Color.Black,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Read PDF",
-                        color = Color.Black,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = onAddTransaction,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("action_add_manual_button"),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF334155))
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Expense",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Add Expense",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                }
-            }
-        }
-
-        // Category Breakdown Card (excluding self-transfers)
+        // Category & Tag Breakdown Card
         if (summary.categoryTotals.isNotEmpty()) {
             item {
                 Card(
@@ -236,7 +180,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Spending Breakdown & Tags",
+                            text = "Spending by Tags & Categories",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
@@ -298,7 +242,7 @@ fun DashboardScreen(
             }
         }
 
-        // Clean Recipient & Sent/Received List Header
+        // Overview Tagged Transactions Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -308,22 +252,22 @@ fun DashboardScreen(
                 Column {
                     Text(
                         text = when (selectedType) {
-                            "DEBIT" -> "Money Sent To (Expenses)"
-                            "CREDIT" -> "Money Received From (Income)"
-                            else -> "People & Payees"
+                            "DEBIT" -> "Expenses by Tag"
+                            "CREDIT" -> "Income by Tag"
+                            else -> "View by Tags & Payees"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
                     Text(
-                        text = "Tap any item to tag or update recipient",
+                        text = "Tap any item to view or assign custom tags",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF64748B)
                     )
                 }
                 TextButton(onClick = onNavigateToTransactions) {
                     Text(
-                        text = "View All (${transactions.size})",
+                        text = "All Transactions (${transactions.size})",
                         color = Color(0xFF10B981),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -387,7 +331,8 @@ fun DashboardScreen(
             items(recentTransactions, key = { it.id }) { item ->
                 TransactionItemCard(
                     transaction = item,
-                    onClick = { onSelectTransaction(item) }
+                    onClick = { onSelectTransaction(item) },
+                    showTagView = true
                 )
             }
         }

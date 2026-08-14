@@ -73,13 +73,11 @@ fun TransactionsListScreen(
 
     val categories = listOf(
         "All",
-        "Coffee",
         "Food & Dining",
-        "Groceries",
+        "Shopping & Health",
         "Transport & Fuel",
         "Bills & Utilities",
-        "Shopping & Health",
-        "Self Transfer",
+        "Finance & Bills",
         "Transfers & Savings",
         "Income & Cashbacks",
         "Personal & Others"
@@ -177,7 +175,7 @@ fun TransactionsListScreen(
                         singleLine = true,
                         visualTransformation = VisualTransformation.None,
                         interactionSource = interactionSource,
-                        placeholder = { Text("Search recipient, tag (e.g. Coffee), UPI...", color = Color(0xFF64748B), style = MaterialTheme.typography.bodyMedium) },
+                        placeholder = { Text("Search transactions, merchant, or UPI ID...", color = Color(0xFF64748B), style = MaterialTheme.typography.bodyMedium) },
                         leadingIcon = {
                             Icon(imageVector = Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF94A3B8), modifier = Modifier.size(18.dp))
                         },

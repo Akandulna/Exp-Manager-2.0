@@ -52,8 +52,101 @@ import java.util.Locale
 fun TransactionItemCard(
     transaction: TransactionEntity,
     onClick: () -> Unit,
+    showTagView: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (!showTagView) {
+        // Standard view as it was originally for Transactions screen
+        val isDebit = transaction.type == "DEBIT"
+        val amountColor = if (isDebit) ExpenseRed else IncomeGreen
+        val amountPrefix = if (isDebit) "-₹" else "+₹"
+        val (icon, iconBg) = getCategoryIconAndColor(transaction.category)
+
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { onClick() }
+                .testTag("transaction_item_${transaction.id}"),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(iconBg.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = transaction.category,
+                        tint = iconBg,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = transaction.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = transaction.date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF94A3B8)
+                        )
+                        Text(
+                            text = " • ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = transaction.category,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = iconBg,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$amountPrefix${String.format(Locale.US, "%,.2f", transaction.amount)}",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = amountColor
+                    )
+                    if (transaction.upiTransactionId.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "UPI: ${transaction.upiTransactionId.takeLast(6)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF64748B),
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    // Overview Page Tag-Focused View
     val isSelf = transaction.isSelfTransfer
     val isDebit = transaction.type == "DEBIT"
     
@@ -73,8 +166,8 @@ fun TransactionItemCard(
     val displayTitle = when {
         transaction.tag.isNotBlank() -> transaction.tag
         isSelf -> "Self Transfer"
-        isDebit -> if (transaction.payee.isNotBlank()) "To: ${transaction.payee}" else transaction.title
-        else -> if (transaction.payee.isNotBlank()) "From: ${transaction.payee}" else transaction.title
+        isDebit -> if (transaction.payee.isNotBlank()) transaction.payee else transaction.title
+        else -> if (transaction.payee.isNotBlank()) transaction.payee else transaction.title
     }
 
     val subtitle = when {
@@ -97,7 +190,7 @@ fun TransactionItemCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .testTag("transaction_item_${transaction.id}"),
+            .testTag("overview_tag_item_${transaction.id}"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
         shape = RoundedCornerShape(16.dp)
     ) {
