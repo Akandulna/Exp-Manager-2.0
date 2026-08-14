@@ -28,6 +28,12 @@ interface TransactionDao {
     @Delete
     suspend fun deleteTransaction(transaction: TransactionEntity)
 
+    @Query("UPDATE transactions SET tag = :tag WHERE payee = :payee")
+    suspend fun updateTagForPayee(payee: String, tag: String)
+
+    @Query("UPDATE transactions SET tag = :tag WHERE id = :id")
+    suspend fun updateTagForTransaction(id: Long, tag: String)
+
     @Query("DELETE FROM transactions")
     suspend fun deleteAllTransactions()
 }

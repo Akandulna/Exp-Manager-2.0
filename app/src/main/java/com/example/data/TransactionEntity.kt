@@ -15,8 +15,22 @@ data class TransactionEntity(
     val amount: Double,          // e.g. 10.0
     val type: String,            // "DEBIT" or "CREDIT"
     val category: String,        // "Food & Dining", "Shopping", "Transport", "Bills", "Self Transfer", "Income", "Others"
+    val tag: String = "",        // Custom tag, e.g. "Coffee", "Self Transfer", "Groceries", "Rent", etc.
     val upiTransactionId: String = "",
     val paymentMethod: String = "",
     val statementSource: String = "Manual Entry", // e.g. "Google Pay Statement", "Slice Statement"
     val notes: String = ""
-)
+) {
+    val isSelfTransfer: Boolean
+        get() = tag.equals("Self Transfer", ignoreCase = true) ||
+                category.equals("Self Transfer", ignoreCase = true) ||
+                title.contains("Self transfer", ignoreCase = true) ||
+                notes.contains("Self transfer", ignoreCase = true)
+
+    val displayName: String
+        get() {
+            if (tag.isNotBlank()) return tag
+            return if (payee.isNotBlank()) payee else title
+        }
+}
+

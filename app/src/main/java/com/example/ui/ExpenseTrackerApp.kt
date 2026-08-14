@@ -171,6 +171,14 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                 onDelete = { item ->
                     viewModel.deleteTransaction(item)
                     selectedDetailTransaction = null
+                },
+                onSaveTag = { tag, applyToAll ->
+                    if (applyToAll && transaction.payee.isNotBlank()) {
+                        viewModel.tagRecipient(transaction.payee, tag)
+                    } else {
+                        viewModel.tagTransaction(transaction.id, tag)
+                    }
+                    selectedDetailTransaction = null
                 }
             )
         }

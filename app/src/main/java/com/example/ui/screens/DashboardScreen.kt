@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,11 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.Button
@@ -28,6 +32,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,7 +51,9 @@ import com.example.data.TransactionEntity
 import com.example.ui.ExpenseViewModel
 import com.example.ui.components.SummaryHeaderCard
 import com.example.ui.components.TransactionItemCard
-import com.example.ui.components.getCategoryIconAndColor
+import com.example.ui.components.getTagOrCategoryIconAndColor
+import com.example.ui.theme.ExpenseRed
+import com.example.ui.theme.IncomeGreen
 import java.util.Locale
 
 @Composable
@@ -59,7 +67,8 @@ fun DashboardScreen(
 ) {
     val summary by viewModel.summaryStats.collectAsState()
     val transactions by viewModel.filteredTransactions.collectAsState()
-    val recentTransactions = transactions.take(6)
+    val selectedType by viewModel.selectedType.collectAsState()
+    val recentTransactions = transactions.take(8)
 
     LazyColumn(
         modifier = modifier
@@ -82,7 +91,7 @@ fun DashboardScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "PDF Statements & Transaction Analyzer",
+                        text = "Clean recipient tracker & statement analyzer",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF94A3B8)
                     )
@@ -90,9 +99,75 @@ fun DashboardScreen(
             }
         }
 
-        // Summary Header Card
+        // Summary Header Card with Clickable Filter
         item {
-            SummaryHeaderCard(summary = summary)
+            SummaryHeaderCard(
+                summary = summary,
+                selectedType = selectedType,
+                onTypeFilterClick = { type ->
+                    viewModel.toggleTypeFilter(type)
+                }
+            )
+        }
+
+        // Active Filter Banner (if filter is selected via Total Spent / Total Received)
+        if (selectedType != "ALL") {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedType == "DEBIT") ExpenseRed.copy(alpha = 0.15f) else IncomeGreen.copy(alpha = 0.15f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.FilterAlt,
+                                contentDescription = "Filtered",
+                                tint = if (selectedType == "DEBIT") ExpenseRed else IncomeGreen,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (selectedType == "DEBIT") "Showing: Only Expenses (Total Spent)" else "Showing: Only Income (Total Received)",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = Color.White
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF1E293B))
+                                .clickable { viewModel.setType("ALL") }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Show All",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF38BDF8),
+                                    fontSize = 11.sp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear Filter",
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Quick Actions Row
@@ -151,7 +226,7 @@ fun DashboardScreen(
             }
         }
 
-        // Category Breakdown Card
+        // Category Breakdown Card (excluding self-transfers)
         if (summary.categoryTotals.isNotEmpty()) {
             item {
                 Card(
@@ -161,7 +236,7 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Spending by Category",
+                            text = "Spending Breakdown & Tags",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
@@ -170,7 +245,7 @@ fun DashboardScreen(
                         val totalSpent = if (summary.totalSpent > 0) summary.totalSpent else 1.0
                         summary.categoryTotals.entries.sortedByDescending { it.value }.take(5).forEach { entry ->
                             val progress = (entry.value / totalSpent).toFloat().coerceIn(0f, 1f)
-                            val (icon, color) = getCategoryIconAndColor(entry.key)
+                            val (icon, color) = getTagOrCategoryIconAndColor(entry.key)
 
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Row(
@@ -223,21 +298,32 @@ fun DashboardScreen(
             }
         }
 
-        // Recent Transactions Section Header
+        // Clean Recipient & Sent/Received List Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Recent Transactions",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
-                )
+                Column {
+                    Text(
+                        text = when (selectedType) {
+                            "DEBIT" -> "Money Sent To (Expenses)"
+                            "CREDIT" -> "Money Received From (Income)"
+                            else -> "People & Payees"
+                        },
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Tap any item to tag or update recipient",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF64748B)
+                    )
+                }
                 TextButton(onClick = onNavigateToTransactions) {
                     Text(
-                        text = "View All (${summary.transactionCount})",
+                        text = "View All (${transactions.size})",
                         color = Color(0xFF10B981),
                         style = MaterialTheme.typography.labelMedium
                     )
@@ -267,23 +353,32 @@ fun DashboardScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "No Transactions Found",
+                            text = if (selectedType != "ALL") "No matching transactions found" else "No Transactions Yet",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Import a PDF bank statement or add transactions manually to track your spending.",
+                            text = if (selectedType != "ALL") "Try clearing your spend/receive filter." else "Import a statement PDF or add an expense manually to see your recipient list.",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF94A3B8),
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = onNavigateToPdfImport,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                        ) {
-                            Text("Import Bank Statement PDF", color = Color.Black, fontWeight = FontWeight.Bold)
+                        if (selectedType != "ALL") {
+                            Button(
+                                onClick = { viewModel.setType("ALL") },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                            ) {
+                                Text("Clear Filter", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Button(
+                                onClick = onNavigateToPdfImport,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                            ) {
+                                Text("Import Bank Statement PDF", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -302,3 +397,4 @@ fun DashboardScreen(
         }
     }
 }
+

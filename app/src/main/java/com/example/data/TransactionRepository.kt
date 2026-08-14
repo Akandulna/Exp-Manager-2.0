@@ -22,6 +22,14 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         transactionDao.deleteTransaction(transaction)
     }
 
+    suspend fun updateTagForPayee(payee: String, tag: String) {
+        transactionDao.updateTagForPayee(payee, tag)
+    }
+
+    suspend fun updateTagForTransaction(id: Long, tag: String) {
+        transactionDao.updateTagForTransaction(id, tag)
+    }
+
     suspend fun deleteAllTransactions() {
         transactionDao.deleteAllTransactions()
     }

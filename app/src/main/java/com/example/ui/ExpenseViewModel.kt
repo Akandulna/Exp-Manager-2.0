@@ -90,6 +90,7 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
             list = list.filter {
                 it.title.lowercase().contains(q) ||
                         it.payee.lowercase().contains(q) ||
+                        it.tag.lowercase().contains(q) ||
                         it.category.lowercase().contains(q) ||
                         it.upiTransactionId.lowercase().contains(q) ||
                         it.paymentMethod.lowercase().contains(q)
@@ -97,11 +98,18 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         }
 
         if (category != "All") {
-            list = list.filter { it.category.equals(category, ignoreCase = true) }
+            list = list.filter {
+                it.category.equals(category, ignoreCase = true) ||
+                        it.tag.equals(category, ignoreCase = true)
+            }
         }
 
-        if (type != "ALL") {
-            list = list.filter { it.type == type }
+        if (type == "DEBIT") {
+            // Show only expenses, excluding self-transfers
+            list = list.filter { it.type == "DEBIT" && !it.isSelfTransfer }
+        } else if (type == "CREDIT") {
+            // Show only income, excluding self-transfers
+            list = list.filter { it.type == "CREDIT" && !it.isSelfTransfer }
         }
 
         when (sort) {
@@ -116,7 +124,7 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         initialValue = emptyList()
     )
 
-    // Expense Summary Stats
+    // Expense Summary Stats (Self Transfer is excluded from expense and income totals)
     val summaryStats: StateFlow<ExpenseSummary> = _rawTransactions
         .map { transactions ->
             var spent = 0.0
@@ -124,11 +132,15 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
             val catMap = mutableMapOf<String, Double>()
 
             transactions.forEach { tx ->
-                if (tx.type == "DEBIT") {
-                    spent += tx.amount
-                    catMap[tx.category] = (catMap[tx.category] ?: 0.0) + tx.amount
-                } else {
-                    received += tx.amount
+                // Self transfer does not count as expense or income
+                if (!tx.isSelfTransfer) {
+                    if (tx.type == "DEBIT") {
+                        spent += tx.amount
+                        val displayCat = if (tx.tag.isNotBlank() && !tx.isSelfTransfer) tx.tag else tx.category
+                        catMap[displayCat] = (catMap[displayCat] ?: 0.0) + tx.amount
+                    } else {
+                        received += tx.amount
+                    }
                 }
             }
 
@@ -136,7 +148,7 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
                 totalSpent = spent,
                 totalReceived = received,
                 netBalance = received - spent,
-                transactionCount = transactions.size,
+                transactionCount = transactions.count { !it.isSelfTransfer },
                 categoryTotals = catMap
             )
         }.flowOn(Dispatchers.Default).stateIn(
@@ -157,8 +169,40 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         _selectedType.value = type
     }
 
+    fun toggleTypeFilter(type: String) {
+        if (_selectedType.value == type) {
+            _selectedType.value = "ALL"
+        } else {
+            _selectedType.value = type
+        }
+    }
+
     fun setSort(sort: SortOption) {
         _selectedSort.value = sort
+    }
+
+    fun tagRecipient(payee: String, tag: String) {
+        viewModelScope.launch {
+            if (payee.isNotBlank()) {
+                repository.updateTagForPayee(payee, tag)
+            }
+        }
+    }
+
+    fun tagTransaction(transactionId: Long, tag: String) {
+        viewModelScope.launch {
+            repository.updateTagForTransaction(transactionId, tag)
+        }
+    }
+
+    fun tagTransaction(transactionId: Long, tag: String, applyToAllForPayee: Boolean = false, payee: String = "") {
+        viewModelScope.launch {
+            if (applyToAllForPayee && payee.isNotBlank()) {
+                repository.updateTagForPayee(payee, tag)
+            } else {
+                repository.updateTagForTransaction(transactionId, tag)
+            }
+        }
     }
 
     fun parsePdfFile(context: Context, uri: Uri) {

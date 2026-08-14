@@ -16,13 +16,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.LocalGroceryStore
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,11 +54,43 @@ fun TransactionItemCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isSelf = transaction.isSelfTransfer
     val isDebit = transaction.type == "DEBIT"
-    val amountColor = if (isDebit) ExpenseRed else IncomeGreen
-    val amountPrefix = if (isDebit) "-₹" else "+₹"
+    
+    val amountColor = when {
+        isSelf -> Color(0xFF38BDF8) // Neutral cyan for self transfer
+        isDebit -> ExpenseRed
+        else -> IncomeGreen
+    }
+    
+    val amountPrefix = when {
+        isSelf -> "₹"
+        isDebit -> "-₹"
+        else -> "+₹"
+    }
 
-    val (icon, iconBg) = getCategoryIconAndColor(transaction.category)
+    // Determine primary display title and category icon
+    val displayTitle = when {
+        transaction.tag.isNotBlank() -> transaction.tag
+        isSelf -> "Self Transfer"
+        isDebit -> if (transaction.payee.isNotBlank()) "To: ${transaction.payee}" else transaction.title
+        else -> if (transaction.payee.isNotBlank()) "From: ${transaction.payee}" else transaction.title
+    }
+
+    val subtitle = when {
+        transaction.tag.isNotBlank() -> {
+            val direction = if (isDebit) "To: " else "From: "
+            if (transaction.payee.isNotBlank()) "$direction${transaction.payee} • ${transaction.date}" else transaction.date
+        }
+        isSelf -> {
+            if (transaction.payee.isNotBlank()) "${transaction.payee} • ${transaction.date}" else transaction.date
+        }
+        else -> {
+            "${transaction.date} • ${transaction.category}"
+        }
+    }
+
+    val (icon, iconBg) = getTagOrCategoryIconAndColor(transaction.tag.ifBlank { transaction.category }, isSelf)
 
     Card(
         modifier = modifier
@@ -71,6 +107,7 @@ fun TransactionItemCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Category / Tag Icon Avatar
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -80,7 +117,7 @@ fun TransactionItemCard(
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = transaction.category,
+                    contentDescription = transaction.tag.ifBlank { transaction.category },
                     tint = iconBg,
                     modifier = Modifier.size(22.dp)
                 )
@@ -88,45 +125,88 @@ fun TransactionItemCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
+            // Main Details
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = transaction.title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = transaction.date,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
+                        text = displayTitle,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Text(
-                        text = " • ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF64748B)
-                    )
-                    Text(
-                        text = transaction.category,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = iconBg,
-                        fontSize = 11.sp
-                    )
+
+                    // Tag Badge if present
+                    if (transaction.tag.isNotBlank() && !isSelf) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(iconBg.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "🏷️ ${transaction.tag}",
+                                color = iconBg,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    } else if (isSelf) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFF0284C7).copy(alpha = 0.25f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "🔄 Transfer",
+                                color = Color(0xFF38BDF8),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF94A3B8),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp
+                )
             }
 
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Amount Column
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "$amountPrefix${String.format(Locale.US, "%,.2f", transaction.amount)}",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = amountColor
                 )
-                if (transaction.upiTransactionId.isNotBlank()) {
+                if (isSelf) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "UPI: ${transaction.upiTransactionId.takeLast(6)}",
+                        text = "Self Transfer",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF64748B),
+                        fontSize = 10.sp
+                    )
+                } else if (transaction.upiTransactionId.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Ref: ${transaction.upiTransactionId.takeLast(6)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF64748B),
                         fontSize = 10.sp
@@ -138,16 +218,38 @@ fun TransactionItemCard(
 }
 
 @Composable
-fun getCategoryIconAndColor(category: String): Pair<ImageVector, Color> {
-    return when (category) {
-        "Groceries" -> Pair(Icons.Default.LocalGroceryStore, Color(0xFF34D399))
-        "Food & Dining" -> Pair(Icons.Default.Fastfood, Color(0xFFFBBF24))
-        "Transport & Fuel" -> Pair(Icons.Default.DirectionsCar, Color(0xFF38BDF8))
-        "Bills & Utilities" -> Pair(Icons.Default.Receipt, Color(0xFFF472B6))
-        "Shopping & Health" -> Pair(Icons.Default.ShoppingBag, Color(0xFFA78BFA))
-        "Finance & Bills" -> Pair(Icons.Default.AccountBalance, Color(0xFF818CF8))
-        "Transfers & Savings" -> Pair(Icons.Default.SwapHoriz, Color(0xFF2DD4BF))
-        "Income & Cashbacks" -> Pair(Icons.Default.MonetizationOn, Color(0xFF10B981))
-        else -> Pair(Icons.Default.Receipt, Color(0xFF94A3B8))
+fun getTagOrCategoryIconAndColor(name: String, isSelfTransfer: Boolean = false): Pair<ImageVector, Color> {
+    if (isSelfTransfer || name.equals("Self Transfer", ignoreCase = true)) {
+        return Pair(Icons.Default.SwapHoriz, Color(0xFF38BDF8))
+    }
+
+    val lower = name.lowercase()
+    return when {
+        lower.contains("coffee") || lower.contains("cafe") || lower.contains("tea") || lower.contains("chai") ->
+            Pair(Icons.Default.LocalCafe, Color(0xFFF59E0B))
+        lower.contains("grocer") || lower.contains("blinkit") || lower.contains("zepto") || lower.contains("supermarket") ->
+            Pair(Icons.Default.LocalGroceryStore, Color(0xFF34D399))
+        lower.contains("food") || lower.contains("dining") || lower.contains("restaurant") || lower.contains("lunch") || lower.contains("dinner") || lower.contains("snack") ->
+            Pair(Icons.Default.Fastfood, Color(0xFFFBBF24))
+        lower.contains("transport") || lower.contains("fuel") || lower.contains("petrol") || lower.contains("uber") || lower.contains("ola") || lower.contains("cab") ->
+            Pair(Icons.Default.DirectionsCar, Color(0xFF38BDF8))
+        lower.contains("bill") || lower.contains("recharge") || lower.contains("utility") || lower.contains("electricity") ->
+            Pair(Icons.Default.Receipt, Color(0xFFF472B6))
+        lower.contains("shopping") || lower.contains("cloth") || lower.contains("health") || lower.contains("amazon") || lower.contains("flipkart") ->
+            Pair(Icons.Default.ShoppingBag, Color(0xFFA78BFA))
+        lower.contains("finance") || lower.contains("bank") || lower.contains("emi") || lower.contains("loan") ->
+            Pair(Icons.Default.AccountBalance, Color(0xFF818CF8))
+        lower.contains("income") || lower.contains("salary") || lower.contains("cashback") || lower.contains("interest") ->
+            Pair(Icons.Default.MonetizationOn, Color(0xFF10B981))
+        lower.contains("transfer") ->
+            Pair(Icons.Default.SwapHoriz, Color(0xFF2DD4BF))
+        else ->
+            Pair(Icons.Default.Tag, Color(0xFF10B981))
     }
 }
+
+@Composable
+fun getCategoryIconAndColor(category: String): Pair<ImageVector, Color> {
+    return getTagOrCategoryIconAndColor(category)
+}
+

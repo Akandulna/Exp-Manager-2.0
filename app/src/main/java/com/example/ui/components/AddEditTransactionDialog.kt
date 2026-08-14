@@ -55,6 +55,7 @@ fun AddEditTransactionDialog(
     var amountText by remember { mutableStateOf(transaction?.amount?.toString() ?: "") }
     var type by remember { mutableStateOf(transaction?.type ?: "DEBIT") }
     var category by remember { mutableStateOf(transaction?.category ?: "Food & Dining") }
+    var tag by remember { mutableStateOf(transaction?.tag ?: "") }
     var upiId by remember { mutableStateOf(transaction?.upiTransactionId ?: "") }
     var paymentMethod by remember { mutableStateOf(transaction?.paymentMethod ?: "UPI") }
     var notes by remember { mutableStateOf(transaction?.notes ?: "") }
@@ -220,6 +221,24 @@ fun AddEditTransactionDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
+                    value = tag,
+                    onValueChange = { tag = it },
+                    label = { Text("Custom Tag (e.g. Coffee, Self Transfer)") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF10B981),
+                        unfocusedBorderColor = Color(0xFF475569),
+                        focusedLabelColor = Color(0xFF10B981),
+                        unfocusedLabelColor = Color(0xFF94A3B8),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
                     value = upiId,
                     onValueChange = { upiId = it },
                     label = { Text("UPI Transaction ID (Optional)") },
@@ -272,6 +291,7 @@ fun AddEditTransactionDialog(
                             amount = amt,
                             type = type,
                             category = category,
+                            tag = tag.trim(),
                             upiTransactionId = upiId,
                             paymentMethod = paymentMethod,
                             statementSource = transaction?.statementSource ?: "Manual Entry",
