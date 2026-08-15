@@ -165,9 +165,12 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
         if (showUpdateDialog) {
             UpdateDialog(
                 updateState = updateState,
-                onDismiss = { showUpdateDialog = false },
-                onDownloadClick = {
-                    updateManager.startDownload()
+                onDismiss = {
+                    showUpdateDialog = false
+                    updateManager.resetState()
+                },
+                onDownloadClick = { customUrl ->
+                    updateManager.startDownload(customUrl)
                 },
                 onInstallClick = { file ->
                     updateManager.installApk(file)

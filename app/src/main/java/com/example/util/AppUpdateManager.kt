@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -23,9 +25,10 @@ import java.net.URL
 
 sealed class UpdateState {
     object Idle : UpdateState()
-    data class Downloading(val progress: Int = 0, val downloadedMb: String = "", val totalMb: String = "") : UpdateState()
+    data class Checking(val message: String = "Connecting to GitHub Releases...") : UpdateState()
+    data class Downloading(val progress: Int = 0, val downloadedMb: String = "", val totalMb: String = "", val fileName: String = "app-debug.apk") : UpdateState()
     data class ReadyToInstall(val apkFile: File) : UpdateState()
-    data class Error(val message: String, val canOpenBrowser: Boolean = true) : UpdateState()
+    data class Error(val message: String, val canOpenBrowser: Boolean = true, val is404NoRelease: Boolean = false) : UpdateState()
 }
 
 class AppUpdateManager(private val context: Context) {
@@ -36,51 +39,145 @@ class AppUpdateManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var downloadJob: Job? = null
 
-    fun startDownload(downloadUrl: String = DEFAULT_DOWNLOAD_URL) {
+    fun startDownload(customUrl: String? = null) {
         downloadJob?.cancel()
-        _updateState.value = UpdateState.Downloading(0, "0 MB", "...")
+        _updateState.value = UpdateState.Checking("Connecting to GitHub Releases...")
 
         downloadJob = scope.launch {
             try {
                 val apkFile = withContext(Dispatchers.IO) {
-                    downloadApkWithRedirects(downloadUrl)
+                    downloadApkWithFallback(customUrl)
                 }
                 _updateState.value = UpdateState.ReadyToInstall(apkFile)
                 installApk(apkFile)
             } catch (e: Exception) {
-                val errorMessage = when {
-                    e.message?.contains("404") == true ->
-                        "Latest release APK not found on GitHub (404). Please ensure 'app-debug.apk' is published to GitHub Releases."
-                    e.message?.contains("Unable to resolve host") == true ->
-                        "No internet connection. Please check your network and try again."
+                val msg = e.localizedMessage ?: "Unknown error"
+                val is404 = msg.contains("404") || msg.contains("No release APK asset found")
+                val friendlyMessage = when {
+                    is404 ->
+                        "Could not connect to GitHub release APK. Please check your network or open the releases page in browser."
+                    msg.contains("Unable to resolve host") || msg.contains("ConnectException") ->
+                        "No internet connection. Please verify your network and retry."
                     else ->
-                        "Download failed: ${e.localizedMessage ?: "Unknown error"}"
+                        "Download failed: $msg"
                 }
-                _updateState.value = UpdateState.Error(errorMessage, canOpenBrowser = true)
+                _updateState.value = UpdateState.Error(friendlyMessage, canOpenBrowser = true, is404NoRelease = is404)
             }
         }
     }
 
-    private fun downloadApkWithRedirects(initialUrl: String): File {
+    private fun downloadApkWithFallback(customUrl: String?): File {
+        val candidateUrls = mutableListOf<String>()
+
+        if (!customUrl.isNullOrBlank()) {
+            candidateUrls.add(customUrl.trim())
+        }
+
+        // Direct tag URL (Matches tag: latest in your GitHub Actions release)
+        candidateUrls.add("https://github.com/Akandulna/Exp-Manager-2.0/releases/download/latest/app-debug.apk")
+        
+        // GitHub API fetched URLs
+        candidateUrls.addAll(fetchApkUrlsFromGithubApi())
+
+        // Standard latest alias
+        candidateUrls.add("https://github.com/Akandulna/Exp-Manager-2.0/releases/latest/download/app-debug.apk")
+
+        var lastError: Exception? = null
+
+        for (url in candidateUrls.distinct()) {
+            try {
+                return downloadFromUrl(url)
+            } catch (e: Exception) {
+                lastError = e
+            }
+        }
+
+        throw lastError ?: IllegalStateException("No release APK asset found at available URLs")
+    }
+
+    private fun fetchApkUrlsFromGithubApi(): List<String> {
+        val result = mutableListOf<String>()
+        val endpoints = listOf(
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases/tags/latest",
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases/latest",
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases"
+        )
+
+        for (endpoint in endpoints) {
+            try {
+                val url = URL(endpoint)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) ExpenseTracker/2.0")
+                    setRequestProperty("Accept", "application/vnd.github.v3+json")
+                }
+
+                if (conn.responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    conn.disconnect()
+                    val urls = parseApkUrls(response)
+                    result.addAll(urls)
+                    if (result.isNotEmpty()) break
+                } else {
+                    conn.disconnect()
+                }
+            } catch (_: Exception) {}
+        }
+        return result
+    }
+
+    private fun parseApkUrls(jsonStr: String): List<String> {
+        val urls = mutableListOf<String>()
+        try {
+            val trimmed = jsonStr.trim()
+            if (trimmed.startsWith("[")) {
+                val array = JSONArray(trimmed)
+                for (i in 0 until array.length()) {
+                    val rel = array.getJSONObject(i)
+                    extractAssets(rel, urls)
+                }
+            } else if (trimmed.startsWith("{")) {
+                val obj = JSONObject(trimmed)
+                extractAssets(obj, urls)
+            }
+        } catch (_: Exception) {}
+        return urls
+    }
+
+    private fun extractAssets(rel: JSONObject, urls: MutableList<String>) {
+        if (!rel.has("assets")) return
+        val assets = rel.getJSONArray("assets")
+        for (j in 0 until assets.length()) {
+            val asset = assets.getJSONObject(j)
+            val name = asset.optString("name", "")
+            val downloadUrl = asset.optString("browser_download_url", "")
+            if (name.endsWith(".apk", ignoreCase = true) && downloadUrl.isNotBlank()) {
+                urls.add(downloadUrl)
+            }
+        }
+    }
+
+    private fun downloadFromUrl(initialUrl: String): File {
         var currentUrl = initialUrl
         var redirectCount = 0
-        val maxRedirects = 6
+        val maxRedirects = 10
         var connection: HttpURLConnection? = null
 
         while (redirectCount < maxRedirects) {
             val url = URL(currentUrl)
             connection = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 15000
-                readTimeout = 30000
+                readTimeout = 40000
                 instanceFollowRedirects = false
-                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) ExpenseManager/2.0")
-                setRequestProperty("Accept", "application/vnd.android.package-archive, */*")
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) ExpenseTracker/2.0")
+                setRequestProperty("Accept", "*/*")
             }
 
             val responseCode = connection.responseCode
             if (responseCode in 300..399) {
                 val location = connection.getHeaderField("Location")
-                    ?: throw IllegalStateException("Redirect without Location header")
+                    ?: throw IllegalStateException("Redirect without location")
                 connection.disconnect()
                 currentUrl = if (location.startsWith("http://") || location.startsWith("https://")) {
                     location
@@ -91,16 +188,14 @@ class AppUpdateManager(private val context: Context) {
             } else if (responseCode == HttpURLConnection.HTTP_OK) {
                 break
             } else {
-                val errorStream = connection.errorStream?.bufferedReader()?.use { it.readText() }
                 connection.disconnect()
-                throw IllegalStateException("Server returned HTTP $responseCode ${errorStream?.take(100) ?: ""}")
+                throw IllegalStateException("HTTP $responseCode from $currentUrl")
             }
         }
 
-        val conn = connection ?: throw IllegalStateException("Could not establish connection")
+        val conn = connection ?: throw IllegalStateException("Could not open connection")
         val fileLength = conn.contentLengthLong
 
-        // Save to cache dir which is accessible to FileProvider
         val targetFile = File(context.cacheDir, "expense_tracker_update.apk")
         if (targetFile.exists()) {
             targetFile.delete()
@@ -113,7 +208,7 @@ class AppUpdateManager(private val context: Context) {
             input = conn.inputStream
             output = FileOutputStream(targetFile)
 
-            val buffer = ByteArray(8 * 1024)
+            val buffer = ByteArray(16 * 1024)
             var totalBytesRead: Long = 0
             var bytesRead: Int
             var lastReportedProgress = -1
@@ -123,7 +218,7 @@ class AppUpdateManager(private val context: Context) {
                 totalBytesRead += bytesRead
 
                 val progress = if (fileLength > 0) {
-                    ((totalBytesRead * 100) / fileLength).toInt()
+                    ((totalBytesRead * 100) / fileLength).toInt().coerceIn(0, 100)
                 } else {
                     0
                 }
@@ -131,7 +226,7 @@ class AppUpdateManager(private val context: Context) {
                 if (progress != lastReportedProgress) {
                     lastReportedProgress = progress
                     val downloadedMb = String.format(java.util.Locale.US, "%.1f MB", totalBytesRead / (1024.0 * 1024.0))
-                    val totalMb = if (fileLength > 0) String.format(java.util.Locale.US, "%.1f MB", fileLength / (1024.0 * 1024.0)) else "..."
+                    val totalMb = if (fileLength > 0) String.format(java.util.Locale.US, "%.1f MB", fileLength / (1024.0 * 1024.0)) else "30.2 MB"
                     scope.launch(Dispatchers.Main) {
                         _updateState.value = UpdateState.Downloading(progress, downloadedMb, totalMb)
                     }
@@ -144,8 +239,8 @@ class AppUpdateManager(private val context: Context) {
             conn.disconnect()
         }
 
-        if (targetFile.length() < 1024) {
-            throw IllegalStateException("Downloaded file is too small (${targetFile.length()} bytes)")
+        if (targetFile.length() < 10000) {
+            throw IllegalStateException("Downloaded file is invalid (${targetFile.length()} bytes)")
         }
 
         return targetFile
@@ -158,7 +253,6 @@ class AppUpdateManager(private val context: Context) {
                 return
             }
 
-            // Check unknown app sources permission for Android 8.0+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!context.packageManager.canRequestPackageInstalls()) {
                     Toast.makeText(context, "Please enable 'Install unknown apps' permission to update", Toast.LENGTH_LONG).show()
@@ -204,8 +298,12 @@ class AppUpdateManager(private val context: Context) {
         downloadJob?.cancel()
     }
 
+    fun resetState() {
+        downloadJob?.cancel()
+        _updateState.value = UpdateState.Idle
+    }
+
     companion object {
-        const val DEFAULT_DOWNLOAD_URL = "https://github.com/Akandulna/Exp-Manager-2.0/releases/latest/download/app-debug.apk"
         const val GITHUB_RELEASES_PAGE_URL = "https://github.com/Akandulna/Exp-Manager-2.0/releases"
     }
 }

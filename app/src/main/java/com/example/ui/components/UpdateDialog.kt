@@ -17,20 +17,31 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,10 +57,13 @@ import java.io.File
 fun UpdateDialog(
     updateState: UpdateState,
     onDismiss: () -> Unit,
-    onDownloadClick: () -> Unit,
+    onDownloadClick: (String?) -> Unit,
     onInstallClick: (File) -> Unit,
     onOpenBrowserClick: () -> Unit
 ) {
+    var customUrl by remember { mutableStateOf("") }
+    var showCustomUrlInput by remember { mutableStateOf(false) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("app_update_dialog"),
@@ -85,7 +99,7 @@ fun UpdateDialog(
                 when (updateState) {
                     is UpdateState.Idle -> {
                         Text(
-                            text = "Download and apply the latest version directly from GitHub Releases without losing any data.",
+                            text = "Download and update to the latest release seamlessly without losing your saved data.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFFCBD5E1)
                         )
@@ -96,17 +110,70 @@ fun UpdateDialog(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "Release Channel:",
+                                    text = "GitHub Release Channel:",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF64748B)
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Akandulna/Exp-Manager-2.0 (latest)",
+                                    text = "Akandulna/Exp-Manager-2.0",
                                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                                     color = Color(0xFF38BDF8)
                                 )
                             }
+                        }
+
+                        if (showCustomUrlInput) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = customUrl,
+                                onValueChange = { customUrl = it },
+                                label = { Text("Custom APK Download URL", color = Color(0xFF94A3B8)) },
+                                placeholder = { Text("https://example.com/app.apk", color = Color(0xFF64748B), fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF3B82F6),
+                                    unfocusedBorderColor = Color(0xFF334155),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        } else {
+                            TextButton(
+                                onClick = { showCustomUrlInput = true },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Link,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFF94A3B8)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Use custom APK link", style = MaterialTheme.typography.labelSmall, color = Color(0xFF94A3B8))
+                            }
+                        }
+                    }
+
+                    is UpdateState.Checking -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF3B82F6),
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = updateState.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFCBD5E1)
+                            )
                         }
                     }
 
@@ -189,7 +256,7 @@ fun UpdateDialog(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Tap 'Install Update' to apply the update immediately.",
+                                text = "Tap 'Install Update' to install without losing data.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF94A3B8)
                             )
@@ -203,13 +270,13 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .background(Color(0xFFEF4444).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                                     .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.Top
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Error,
                                     contentDescription = "Error",
                                     tint = Color(0xFFEF4444),
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
@@ -219,8 +286,26 @@ fun UpdateDialog(
                                 )
                             }
 
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            OutlinedTextField(
+                                value = customUrl,
+                                onValueChange = { customUrl = it },
+                                label = { Text("Or direct APK URL", color = Color(0xFF94A3B8), fontSize = 12.sp) },
+                                placeholder = { Text("https://.../app.apk", color = Color(0xFF64748B), fontSize = 11.sp) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color(0xFF3B82F6),
+                                    unfocusedBorderColor = Color(0xFF334155),
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+
                             if (updateState.canOpenBrowser) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                                 OutlinedButton(
                                     onClick = onOpenBrowserClick,
                                     modifier = Modifier.fillMaxWidth(),
@@ -234,7 +319,7 @@ fun UpdateDialog(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Open GitHub Releases in Browser",
+                                        text = "Open GitHub Releases Page",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = Color(0xFF38BDF8)
                                     )
@@ -249,7 +334,7 @@ fun UpdateDialog(
             when (updateState) {
                 is UpdateState.Idle -> {
                     Button(
-                        onClick = onDownloadClick,
+                        onClick = { onDownloadClick(customUrl.takeIf { it.isNotBlank() }) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                         modifier = Modifier.testTag("btn_download_update")
                     ) {
@@ -261,7 +346,7 @@ fun UpdateDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Download & Install",
+                            text = "Check & Download",
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
@@ -284,19 +369,26 @@ fun UpdateDialog(
 
                 is UpdateState.Error -> {
                     Button(
-                        onClick = onDownloadClick,
+                        onClick = { onDownloadClick(customUrl.takeIf { it.isNotBlank() }) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Retry",
+                            text = "Retry Download",
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                is UpdateState.Downloading -> {
-                    // No action while downloading
+                is UpdateState.Checking, is UpdateState.Downloading -> {
+                    // No confirm action while in progress
                 }
             }
         },
@@ -306,7 +398,7 @@ fun UpdateDialog(
                 modifier = Modifier.testTag("btn_dismiss_update")
             ) {
                 Text(
-                    text = if (updateState is UpdateState.Downloading) "Hide" else "Cancel",
+                    text = if (updateState is UpdateState.Downloading || updateState is UpdateState.Checking) "Hide" else "Cancel",
                     color = Color(0xFF94A3B8)
                 )
             }
