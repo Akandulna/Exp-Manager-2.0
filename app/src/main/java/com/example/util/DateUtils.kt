@@ -62,4 +62,12 @@ object DateUtils {
 
         return System.currentTimeMillis()
     }
+
+    fun todayDateString(): String {
+        return SimpleDateFormat("dd MMM, yyyy", Locale.US).format(Date())
+    }
+
+    fun currentTimeString(): String {
+        return SimpleDateFormat("hh:mm a", Locale.US).format(Date())
+    }
 }

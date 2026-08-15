@@ -36,8 +36,145 @@ class AppUpdateManager(private val context: Context) {
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
+    private val _hasNewUpdate = MutableStateFlow(false)
+    val hasNewUpdate: StateFlow<Boolean> = _hasNewUpdate.asStateFlow()
+
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var downloadJob: Job? = null
+
+    fun checkForUpdateSilently() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val releaseInfo = fetchLatestReleaseMetadata()
+                if (releaseInfo != null && releaseInfo.hasApk) {
+                    val isNewer = isReleaseNewer(releaseInfo.tagName, releaseInfo.publishedAt)
+                    _hasNewUpdate.value = isNewer
+                } else {
+                    _hasNewUpdate.value = false
+                }
+            } catch (_: Exception) {
+                _hasNewUpdate.value = false
+            }
+        }
+    }
+
+    data class ReleaseMetadata(
+        val tagName: String,
+        val publishedAt: String,
+        val hasApk: Boolean,
+        val apkDownloadUrl: String?
+    )
+
+    private fun fetchLatestReleaseMetadata(): ReleaseMetadata? {
+        val endpoints = listOf(
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases/latest",
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases/tags/latest",
+            "https://api.github.com/repos/Akandulna/Exp-Manager-2.0/releases"
+        )
+
+        for (endpoint in endpoints) {
+            try {
+                val url = URL(endpoint)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) ExpenseTracker/2.0")
+                    setRequestProperty("Accept", "application/vnd.github.v3+json")
+                }
+
+                if (conn.responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader().use { it.readText() }
+                    conn.disconnect()
+                    val meta = parseReleaseMetadata(response)
+                    if (meta != null) return meta
+                } else {
+                    conn.disconnect()
+                }
+            } catch (_: Exception) {}
+        }
+        return null
+    }
+
+    private fun parseReleaseMetadata(jsonStr: String): ReleaseMetadata? {
+        try {
+            val trimmed = jsonStr.trim()
+            val releaseObj = if (trimmed.startsWith("[")) {
+                val array = JSONArray(trimmed)
+                if (array.length() > 0) array.getJSONObject(0) else null
+            } else if (trimmed.startsWith("{")) {
+                JSONObject(trimmed)
+            } else null
+
+            if (releaseObj != null) {
+                val tagName = releaseObj.optString("tag_name", "")
+                val publishedAt = releaseObj.optString("published_at", "")
+                var hasApk = false
+                var apkUrl: String? = null
+
+                if (releaseObj.has("assets")) {
+                    val assets = releaseObj.getJSONArray("assets")
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val name = asset.optString("name", "")
+                        val downloadUrl = asset.optString("browser_download_url", "")
+                        if (name.endsWith(".apk", ignoreCase = true)) {
+                            hasApk = true
+                            apkUrl = downloadUrl
+                            break
+                        }
+                    }
+                }
+
+                return ReleaseMetadata(
+                    tagName = tagName,
+                    publishedAt = publishedAt,
+                    hasApk = hasApk,
+                    apkDownloadUrl = apkUrl
+                )
+            }
+        } catch (_: Exception) {}
+        return null
+    }
+
+    private fun isReleaseNewer(remoteTag: String, publishedAt: String): Boolean {
+        try {
+            val currentVersionName = com.example.BuildConfig.VERSION_NAME
+            val currentCode = com.example.BuildConfig.VERSION_CODE
+
+            val cleanRemote = remoteTag.removePrefix("v").removePrefix("V").trim()
+            val cleanCurrent = currentVersionName.removePrefix("v").removePrefix("V").trim()
+
+            // If tag has explicit version numbers like 1.0.2
+            val remoteParts = cleanRemote.split(".").mapNotNull { it.toIntOrNull() }
+            val currentParts = cleanCurrent.split(".").mapNotNull { it.toIntOrNull() }
+
+            if (remoteParts.isNotEmpty() && currentParts.isNotEmpty()) {
+                val maxLen = maxOf(remoteParts.size, currentParts.size)
+                for (i in 0 until maxLen) {
+                    val r = remoteParts.getOrElse(i) { 0 }
+                    val c = currentParts.getOrElse(i) { 0 }
+                    if (r > c) return true
+                    if (r < c) return false
+                }
+                return false
+            }
+
+            // If remote tag is "latest", check if release was published after current app install time
+            if (remoteTag.equals("latest", ignoreCase = true) && publishedAt.isNotBlank()) {
+                try {
+                    val pkgInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                    val lastUpdateTime = pkgInfo.lastUpdateTime
+                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+                        timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    }
+                    val remoteDate = sdf.parse(publishedAt)?.time ?: 0L
+                    // If release on github is newer than when the app package was installed
+                    return remoteDate > lastUpdateTime
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
+        return false
+    }
 
     fun startDownload(customUrl: String? = null) {
         downloadJob?.cancel()

@@ -65,7 +65,9 @@ fun DashboardScreen(
     onNavigateToPdfImport: () -> Unit,
     onAddTransaction: () -> Unit,
     onSelectTransaction: (TransactionEntity) -> Unit,
+    hasNewUpdate: Boolean = false,
     onCheckUpdate: () -> Unit = {},
+    onOpenGroupPage: (title: String, isTag: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val summary by viewModel.summaryStats.collectAsState()
@@ -139,30 +141,32 @@ fun DashboardScreen(
                     )
                 }
 
-                // Update App Button
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF1E293B))
-                        .clickable { onCheckUpdate() }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .testTag("btn_check_update")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                // Update App Button (Only displayed when there is a new update available)
+                if (hasNewUpdate) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFDC2626).copy(alpha = 0.2f))
+                            .clickable { onCheckUpdate() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .testTag("btn_check_update")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.SystemUpdate,
-                            contentDescription = "Update App",
-                            tint = Color(0xFFEF4444),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Update",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFFEF4444)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = "New Update Available",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Update",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFFEF4444)
+                            )
+                        }
                     }
                 }
             }
@@ -383,7 +387,8 @@ fun DashboardScreen(
                                     isTag = true,
                                     netAmount = netAmount,
                                     transactions = txs,
-                                    onSelectTransaction = onSelectTransaction
+                                    onSelectTransaction = onSelectTransaction,
+                                    onOpenGroupPage = { onOpenGroupPage(tagName, true) }
                                 )
                             }
                         }
@@ -447,7 +452,8 @@ fun DashboardScreen(
                                     isTag = false,
                                     netAmount = netAmount,
                                     transactions = txs,
-                                    onSelectTransaction = onSelectTransaction
+                                    onSelectTransaction = onSelectTransaction,
+                                    onOpenGroupPage = { onOpenGroupPage(payeeName, false) }
                                 )
                             }
                         }
@@ -468,9 +474,9 @@ fun BreakdownColumnCard(
     isTag: Boolean,
     netAmount: Double,
     transactions: List<com.example.data.TransactionEntity>,
-    onSelectTransaction: (com.example.data.TransactionEntity) -> Unit
+    onSelectTransaction: (com.example.data.TransactionEntity) -> Unit,
+    onOpenGroupPage: () -> Unit
 ) {
-    val expanded = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val isTransferGroup = transactions.all { it.isTransferOrSaving }
     val isDebit = !isTransferGroup && (netAmount < 0 || transactions.all { it.type == "DEBIT" })
     
@@ -491,7 +497,7 @@ fun BreakdownColumnCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable { expanded.value = !expanded.value },
+            .clickable { onOpenGroupPage() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -543,9 +549,9 @@ fun BreakdownColumnCard(
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Transaction count & toggle
+            // Transaction count & View All Indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -558,78 +564,22 @@ fun BreakdownColumnCard(
                     fontSize = 11.sp
                 )
 
-                Text(
-                    text = if (expanded.value) "▲ Hide" else "▼ Details",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (expanded.value) Color(0xFF38BDF8) else Color(0xFF64748B),
-                    fontSize = 10.sp
-                )
-            }
-
-            // Expanded Transaction Items
-            androidx.compose.animation.AnimatedVisibility(visible = expanded.value) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                        .background(Color(0xFF0F172A).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    transactions.forEachIndexed { index, tx ->
-                        val txIsTransfer = tx.isTransferOrSaving
-                        val txIsDebit = tx.type == "DEBIT"
-                        val txColor = when {
-                            txIsTransfer -> Color(0xFF38BDF8)
-                            txIsDebit -> ExpenseRed
-                            else -> IncomeGreen
-                        }
-                        val txPrefix = when {
-                            txIsTransfer -> "₹"
-                            txIsDebit -> "-₹"
-                            else -> "+₹"
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable { onSelectTransaction(tx) }
-                                .padding(vertical = 4.dp, horizontal = 4.dp)
-                        ) {
-                            Text(
-                                text = if (isTag) (if (tx.payee.isNotBlank()) tx.payee else tx.title) else (if (tx.tag.isNotBlank()) "🏷️ ${tx.tag}" else tx.category),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = tx.date,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF64748B),
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    text = "$txPrefix${String.format(Locale.US, "%,.2f", tx.amount)}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = txColor,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                        if (index < transactions.size - 1) {
-                            androidx.compose.material3.HorizontalDivider(
-                                color = Color(0xFF334155).copy(alpha = 0.4f),
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 2.dp)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "View All",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color(0xFFEF4444),
+                        fontSize = 10.sp
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = "→",
+                        color = Color(0xFFEF4444),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
