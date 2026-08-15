@@ -115,7 +115,7 @@ fun TransactionsListScreen(
                         Icon(
                             imageVector = Icons.Default.FilterList,
                             contentDescription = "Sort Transactions",
-                            tint = Color(0xFF10B981)
+                            tint = Color(0xFF3B82F6)
                         )
                     }
 
@@ -191,7 +191,7 @@ fun TransactionsListScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFF1E293B),
                             unfocusedContainerColor = Color(0xFF1E293B),
-                            focusedBorderColor = Color(0xFF10B981),
+                            focusedBorderColor = Color(0xFF3B82F6),
                             unfocusedBorderColor = Color(0xFF334155),
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White
@@ -205,7 +205,7 @@ fun TransactionsListScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Color(0xFF1E293B),
                                     unfocusedContainerColor = Color(0xFF1E293B),
-                                    focusedBorderColor = Color(0xFF10B981),
+                                    focusedBorderColor = Color(0xFF3B82F6),
                                     unfocusedBorderColor = Color(0xFF334155)
                                 ),
                                 shape = RoundedCornerShape(10.dp)
@@ -229,8 +229,8 @@ fun TransactionsListScreen(
                         onClick = { viewModel.setType(type) },
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = types.size),
                         colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = Color(0xFF10B981),
-                            activeContentColor = Color.Black,
+                            activeContainerColor = Color(0xFF2563EB),
+                            activeContentColor = Color.White,
                             inactiveContainerColor = Color(0xFF1E293B),
                             inactiveContentColor = Color(0xFF94A3B8)
                         )

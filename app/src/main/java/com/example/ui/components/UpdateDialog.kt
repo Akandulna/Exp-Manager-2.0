@@ -62,13 +62,13 @@ fun UpdateDialog(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF10B981).copy(alpha = 0.2f)),
+                        .background(Color(0xFF3B82F6).copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.SystemUpdate,
                         contentDescription = "App Update",
-                        tint = Color(0xFF10B981),
+                        tint = Color(0xFF3B82F6),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -129,7 +129,7 @@ fun UpdateDialog(
                                         .fillMaxWidth()
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(4.dp)),
-                                    color = Color(0xFF10B981),
+                                    color = Color(0xFF3B82F6),
                                     trackColor = Color(0xFF334155)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -140,7 +140,7 @@ fun UpdateDialog(
                                     Text(
                                         text = "${updateState.progress}%",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF10B981),
+                                        color = Color(0xFF3B82F6),
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
@@ -155,7 +155,7 @@ fun UpdateDialog(
                                         .fillMaxWidth()
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(4.dp)),
-                                    color = Color(0xFF10B981),
+                                    color = Color(0xFF3B82F6),
                                     trackColor = Color(0xFF334155)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -178,7 +178,7 @@ fun UpdateDialog(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Download complete",
-                                tint = Color(0xFF10B981),
+                                tint = Color(0xFF3B82F6),
                                 modifier = Modifier.size(48.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -250,19 +250,19 @@ fun UpdateDialog(
                 is UpdateState.Idle -> {
                     Button(
                         onClick = onDownloadClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                         modifier = Modifier.testTag("btn_download_update")
                     ) {
                         Icon(
                             imageVector = Icons.Default.CloudDownload,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = Color.White,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Download & Install",
-                            color = Color.Black,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -271,12 +271,12 @@ fun UpdateDialog(
                 is UpdateState.ReadyToInstall -> {
                     Button(
                         onClick = { onInstallClick(updateState.apkFile) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                         modifier = Modifier.testTag("btn_install_update")
                     ) {
                         Text(
                             text = "Install Update",
-                            color = Color.Black,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -285,11 +285,11 @@ fun UpdateDialog(
                 is UpdateState.Error -> {
                     Button(
                         onClick = onDownloadClick,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
                     ) {
                         Text(
                             text = "Retry",
-                            color = Color.Black,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }

@@ -39,19 +39,21 @@ fun FilterBar(
                 label = {
                     Text(
                         text = category,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isSelected) Color.Black else Color(0xFFCBD5E1)
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                        ),
+                        color = if (isSelected) Color.White else Color(0xFFCBD5E1)
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFF10B981),
+                    selectedContainerColor = Color(0xFF2563EB),
                     containerColor = Color(0xFF1E293B)
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
                     borderColor = Color(0xFF334155),
-                    selectedBorderColor = Color(0xFF10B981)
+                    selectedBorderColor = Color(0xFF3B82F6)
                 )
             )
         }

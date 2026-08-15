@@ -74,9 +74,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     icon = { Icon(imageVector = Icons.Default.Dashboard, contentDescription = "Dashboard", modifier = Modifier.size(20.dp)) },
                     label = { Text("Overview") },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = Color(0xFF10B981),
-                        indicatorColor = Color(0xFF10B981),
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color(0xFF3B82F6),
+                        indicatorColor = Color(0xFF2563EB),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -89,9 +89,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     icon = { Icon(imageVector = Icons.Default.List, contentDescription = "Transactions", modifier = Modifier.size(20.dp)) },
                     label = { Text("Transactions") },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = Color(0xFF10B981),
-                        indicatorColor = Color(0xFF10B981),
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color(0xFF3B82F6),
+                        indicatorColor = Color(0xFF2563EB),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -104,9 +104,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     icon = { Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = "PDF Reader", modifier = Modifier.size(20.dp)) },
                     label = { Text("Read PDF") },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = Color(0xFF10B981),
-                        indicatorColor = Color(0xFF10B981),
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color(0xFF3B82F6),
+                        indicatorColor = Color(0xFF2563EB),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -121,8 +121,8 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                         editingTransaction = null
                         showAddDialog = true
                     },
-                    containerColor = Color(0xFF10B981),
-                    contentColor = Color.Black,
+                    containerColor = Color(0xFF3B82F6),
+                    contentColor = Color.White,
                     modifier = Modifier.testTag("fab_add_expense")
                 ) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = "Add Expense")

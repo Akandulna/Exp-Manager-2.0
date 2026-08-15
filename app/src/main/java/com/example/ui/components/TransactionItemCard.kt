@@ -416,7 +416,7 @@ fun getTagOrCategoryIconAndColor(name: String, isSelfTransfer: Boolean = false):
         lower.contains("transfer") || lower.contains("saving") || lower.contains("investment") ->
             Pair(Icons.Default.SwapHoriz, Color(0xFF38BDF8))
         else ->
-            Pair(Icons.Default.Tag, Color(0xFF10B981))
+            Pair(Icons.Default.Tag, Color(0xFF3B82F6))
     }
 }
 

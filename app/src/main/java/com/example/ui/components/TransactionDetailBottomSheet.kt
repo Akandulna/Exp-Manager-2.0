@@ -217,7 +217,7 @@ fun TransactionDetailDialog(
                             Icon(
                                 imageVector = Icons.Default.Tag,
                                 contentDescription = "Tag",
-                                tint = Color(0xFF10B981),
+                                tint = Color(0xFF3B82F6),
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
@@ -242,7 +242,7 @@ fun TransactionDetailDialog(
                                     tag.contains("Shopping", ignoreCase = true) -> Color(0xFFEC4899)
                                     tag.contains("Food", ignoreCase = true) -> Color(0xFFF97316)
                                     tag.contains("Bills", ignoreCase = true) -> Color(0xFFA855F7)
-                                    else -> Color(0xFF10B981)
+                                    else -> Color(0xFF3B82F6)
                                 }
                                 
                                 Surface(
@@ -262,7 +262,7 @@ fun TransactionDetailDialog(
                                             Icon(
                                                 imageVector = Icons.Default.Check,
                                                 contentDescription = "Selected",
-                                                tint = Color.Black,
+                                                tint = Color.White,
                                                 modifier = Modifier.size(12.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
@@ -270,7 +270,7 @@ fun TransactionDetailDialog(
                                         Text(
                                             text = tag,
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = if (isSelected) Color.Black else Color.White,
+                                            color = if (isSelected) Color.White else Color.White,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
                                     }
@@ -300,15 +300,15 @@ fun TransactionDetailDialog(
                                         Icon(
                                             imageVector = Icons.Default.Add,
                                             contentDescription = "Add Tag to List",
-                                            tint = Color(0xFF10B981)
+                                            tint = Color(0xFF3B82F6)
                                         )
                                     }
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF10B981),
+                                focusedBorderColor = Color(0xFF3B82F6),
                                 unfocusedBorderColor = Color(0xFF334155),
-                                focusedLabelColor = Color(0xFF10B981),
+                                focusedLabelColor = Color(0xFF3B82F6),
                                 unfocusedLabelColor = Color(0xFF94A3B8),
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White
@@ -328,8 +328,8 @@ fun TransactionDetailDialog(
                                     checked = applyToAllForPayee,
                                     onCheckedChange = { applyToAllForPayee = it },
                                     colors = CheckboxDefaults.colors(
-                                        checkedColor = Color(0xFF10B981),
-                                        checkmarkColor = Color.Black
+                                        checkedColor = Color(0xFF3B82F6),
+                                        checkmarkColor = Color.White
                                     )
                                 )
                                 Text(
@@ -351,12 +351,12 @@ fun TransactionDetailDialog(
                                 }
                                 onSaveTag(finalTag, applyToAllForPayee)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = if (currentTag.isBlank()) "Clear Tag" else "Save Tag: $currentTag",
-                                color = Color.Black,
+                                color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium
                             )

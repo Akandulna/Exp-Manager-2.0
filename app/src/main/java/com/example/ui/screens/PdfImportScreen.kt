@@ -105,13 +105,13 @@ fun PdfImportScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF10B981).copy(alpha = 0.15f)),
+                        .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.UploadFile,
                         contentDescription = "Upload PDF",
-                        tint = Color(0xFF10B981),
+                        tint = Color(0xFF3B82F6),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -132,7 +132,7 @@ fun PdfImportScreen(
 
                 Button(
                     onClick = { pdfPickerLauncher.launch("application/pdf") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -142,20 +142,18 @@ fun PdfImportScreen(
                     Icon(
                         imageVector = Icons.Default.PictureAsPdf,
                         contentDescription = "Pick PDF",
-                        tint = Color.Black,
+                        tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Choose PDF File from Device",
-                        color = Color.Black,
+                        color = Color.White,
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -169,7 +167,7 @@ fun PdfImportScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFF10B981))
+                        CircularProgressIndicator(color = Color(0xFF3B82F6))
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Reading PDF and extracting transactions...",
@@ -264,12 +262,12 @@ fun PdfImportScreen(
 
                         Button(
                             onClick = { viewModel.confirmImport(state.transactions, state.sourceName) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
                             modifier = Modifier.testTag("confirm_import_button")
                         ) {
                             Text(
                                 text = if (state.duplicateCount > 0) "Import ${state.newCount} New" else "Import All",
-                                color = Color.Black,
+                                color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
                         }
