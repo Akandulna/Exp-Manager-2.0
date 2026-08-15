@@ -26,21 +26,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.TransactionEntity
 import com.example.ui.components.AddEditTransactionDialog
 import com.example.ui.components.TransactionDetailDialog
+import com.example.ui.components.UpdateDialog
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.PdfImportScreen
 import com.example.ui.screens.TransactionsListScreen
+import com.example.util.AppUpdateManager
+import com.example.util.UpdateState
+import androidx.compose.runtime.DisposableEffect
 
 @Composable
 fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
+    val context = LocalContext.current
+    val updateManager = remember { AppUpdateManager(context) }
+    val updateState by updateManager.updateState.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            updateManager.cleanup()
+        }
+    }
+
     var selectedTab by remember { mutableIntStateOf(0) }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
     var selectedDetailTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
 
@@ -130,6 +146,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     },
                     onSelectTransaction = { item ->
                         selectedDetailTransaction = item
+                    },
+                    onCheckUpdate = {
+                        showUpdateDialog = true
                     }
                 )
                 1 -> TransactionsListScreen(
@@ -140,6 +159,20 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                 )
                 2 -> PdfImportScreen(viewModel = viewModel)
             }
+        }
+
+        // In-App Update Dialog
+        if (showUpdateDialog) {
+            UpdateDialog(
+                updateState = updateState,
+                onDismiss = { showUpdateDialog = false },
+                onDownloadClick = {
+                    updateManager.startDownload()
+                },
+                onInstallClick = { file ->
+                    updateManager.installApk(file)
+                }
+            )
         }
 
         // Add or Edit Transaction Dialog

@@ -57,10 +57,20 @@ fun TransactionItemCard(
 ) {
     if (!showTagView) {
         // Standard view as it was originally for Transactions screen
+        val isSelf = transaction.isSelfTransfer
         val isDebit = transaction.type == "DEBIT"
-        val amountColor = if (isDebit) ExpenseRed else IncomeGreen
-        val amountPrefix = if (isDebit) "-₹" else "+₹"
-        val (icon, iconBg) = getCategoryIconAndColor(transaction.category)
+        val amountColor = when {
+            isSelf -> Color(0xFF38BDF8)
+            isDebit -> ExpenseRed
+            else -> IncomeGreen
+        }
+        val amountPrefix = when {
+            isSelf -> "₹"
+            isDebit -> "-₹"
+            else -> "+₹"
+        }
+        val (icon, iconBg) = getTagOrCategoryIconAndColor(transaction.tag.ifBlank { transaction.category }, isSelf)
+        val (_, tagColor) = getTagOrCategoryIconAndColor(transaction.tag)
 
         Card(
             modifier = modifier
@@ -95,24 +105,69 @@ fun TransactionItemCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = transaction.title,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = transaction.title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+
+                        // Attached Tag badge
+                        if (transaction.tag.isNotBlank() && !isSelf) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(tagColor.copy(alpha = 0.2f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "🏷️ ${transaction.tag}",
+                                    color = tagColor,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        } else if (isSelf) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF0284C7).copy(alpha = 0.25f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "🔄 Transfer",
+                                    color = Color(0xFF38BDF8),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
                             text = transaction.date,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF94A3B8)
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp
                         )
                         Text(
-                            text = " • ",
+                            text = "•",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF64748B)
+                            color = Color(0xFF64748B),
+                            fontSize = 12.sp
                         )
                         Text(
                             text = transaction.category,
@@ -120,6 +175,22 @@ fun TransactionItemCard(
                             color = iconBg,
                             fontSize = 11.sp
                         )
+                        if (transaction.payee.isNotBlank() && transaction.payee != transaction.title) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF64748B),
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = transaction.payee,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
@@ -131,7 +202,15 @@ fun TransactionItemCard(
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = amountColor
                     )
-                    if (transaction.upiTransactionId.isNotBlank()) {
+                    if (isSelf) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Self Transfer",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF64748B),
+                            fontSize = 10.sp
+                        )
+                    } else if (transaction.upiTransactionId.isNotBlank()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "UPI: ${transaction.upiTransactionId.takeLast(6)}",

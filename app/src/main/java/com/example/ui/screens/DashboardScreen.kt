@@ -21,9 +21,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,6 +65,7 @@ fun DashboardScreen(
     onNavigateToPdfImport: () -> Unit,
     onAddTransaction: () -> Unit,
     onSelectTransaction: (TransactionEntity) -> Unit,
+    onCheckUpdate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val summary by viewModel.summaryStats.collectAsState()
@@ -102,7 +105,7 @@ fun DashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Expense Overview",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -113,6 +116,33 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF94A3B8)
                     )
+                }
+
+                // Update App Button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF1E293B))
+                        .clickable { onCheckUpdate() }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .testTag("btn_check_update")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "Update App",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Update",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF10B981)
+                        )
+                    }
                 }
             }
         }
