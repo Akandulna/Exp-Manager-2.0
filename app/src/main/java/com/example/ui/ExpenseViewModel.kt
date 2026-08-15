@@ -76,6 +76,50 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
 
     private val _rawTransactions = repository.allTransactions
 
+    companion object {
+        val DEFAULT_TAGS = listOf(
+            "Coffee",
+            "Food & Dining",
+            "Groceries",
+            "Transport & Fuel",
+            "Bills & Utilities",
+            "Self Transfer",
+            "Transfers & Savings",
+            "Shopping & Health",
+            "Income & Salary",
+            "Rent & Housing",
+            "Entertainment",
+            "Investments"
+        )
+    }
+
+    private val _customTags = MutableStateFlow<Set<String>>(emptySet())
+
+    val allTags: StateFlow<List<String>> = combine(
+        _rawTransactions,
+        _customTags
+    ) { transactions, customTags ->
+        val tagsFromTransactions = transactions
+            .mapNotNull { it.tag.trim().takeIf { t -> t.isNotEmpty() } }
+        val combined = (DEFAULT_TAGS + customTags + tagsFromTransactions)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        
+        // Preserve case of first occurrence while deduplicating case-insensitively
+        val seen = mutableSetOf<String>()
+        val result = mutableListOf<String>()
+        for (tag in combined) {
+            if (seen.add(tag.lowercase())) {
+                result.add(tag)
+            }
+        }
+        result
+    }.flowOn(Dispatchers.Default).stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = DEFAULT_TAGS
+    )
+
     // Filtered & Sorted Transactions
     val filteredTransactions: StateFlow<List<TransactionEntity>> = combine(
         _rawTransactions,
@@ -188,26 +232,45 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         _selectedSort.value = sort
     }
 
+    fun addCustomTag(tag: String) {
+        val trimmed = tag.trim()
+        if (trimmed.isNotEmpty()) {
+            _customTags.value = _customTags.value + trimmed
+        }
+    }
+
     fun tagRecipient(payee: String, tag: String) {
+        val trimmedTag = tag.trim()
+        if (trimmedTag.isNotEmpty()) {
+            addCustomTag(trimmedTag)
+        }
         viewModelScope.launch {
             if (payee.isNotBlank()) {
-                repository.updateTagForPayee(payee, tag)
+                repository.updateTagForPayee(payee, trimmedTag)
             }
         }
     }
 
     fun tagTransaction(transactionId: Long, tag: String) {
+        val trimmedTag = tag.trim()
+        if (trimmedTag.isNotEmpty()) {
+            addCustomTag(trimmedTag)
+        }
         viewModelScope.launch {
-            repository.updateTagForTransaction(transactionId, tag)
+            repository.updateTagForTransaction(transactionId, trimmedTag)
         }
     }
 
     fun tagTransaction(transactionId: Long, tag: String, applyToAllForPayee: Boolean = false, payee: String = "") {
+        val trimmedTag = tag.trim()
+        if (trimmedTag.isNotEmpty()) {
+            addCustomTag(trimmedTag)
+        }
         viewModelScope.launch {
             if (applyToAllForPayee && payee.isNotBlank()) {
-                repository.updateTagForPayee(payee, tag)
+                repository.updateTagForPayee(payee, trimmedTag)
             } else {
-                repository.updateTagForTransaction(transactionId, tag)
+                repository.updateTagForTransaction(transactionId, trimmedTag)
             }
         }
     }

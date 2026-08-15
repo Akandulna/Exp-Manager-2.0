@@ -18,6 +18,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,8 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
     var selectedDetailTransaction by remember { mutableStateOf<TransactionEntity?>(null) }
+
+    val allTags by viewModel.allTags.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -143,11 +146,15 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
         if (showAddDialog || editingTransaction != null) {
             AddEditTransactionDialog(
                 transaction = editingTransaction,
+                availableTags = allTags,
                 onDismiss = {
                     showAddDialog = false
                     editingTransaction = null
                 },
                 onSave = { item ->
+                    if (item.tag.isNotBlank()) {
+                        viewModel.addCustomTag(item.tag)
+                    }
                     if (editingTransaction != null) {
                         viewModel.updateTransaction(item)
                     } else {
@@ -163,6 +170,7 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
         selectedDetailTransaction?.let { transaction ->
             TransactionDetailDialog(
                 transaction = transaction,
+                availableTags = allTags,
                 onDismiss = { selectedDetailTransaction = null },
                 onEdit = { item ->
                     selectedDetailTransaction = null
@@ -173,6 +181,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     selectedDetailTransaction = null
                 },
                 onSaveTag = { tag, applyToAll ->
+                    if (tag.isNotBlank()) {
+                        viewModel.addCustomTag(tag)
+                    }
                     if (applyToAll && transaction.payee.isNotBlank()) {
                         viewModel.tagRecipient(transaction.payee, tag)
                     } else {

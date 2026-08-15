@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -33,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -62,6 +64,7 @@ import java.util.Locale
 @Composable
 fun TransactionDetailDialog(
     transaction: TransactionEntity,
+    availableTags: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onEdit: (TransactionEntity) -> Unit,
     onDelete: (TransactionEntity) -> Unit,
@@ -74,17 +77,42 @@ fun TransactionDetailDialog(
     var currentTag by remember { mutableStateOf(transaction.tag) }
     var customTagInput by remember { mutableStateOf(transaction.tag) }
     var applyToAllForPayee by remember { mutableStateOf(true) }
+    var localCustomTags by remember { mutableStateOf(emptySet<String>()) }
 
-    val presetTags = listOf(
+    val defaultBase = if (availableTags.isNotEmpty()) availableTags else listOf(
         "Coffee",
         "Food & Dining",
         "Groceries",
         "Transport & Fuel",
         "Bills & Utilities",
         "Self Transfer",
+        "Transfers & Savings",
         "Shopping & Health",
         "Income & Salary"
     )
+
+    val allDisplayTags = remember(defaultBase, localCustomTags, transaction.tag) {
+        val combined = (defaultBase + localCustomTags + listOfNotNull(transaction.tag.takeIf { it.isNotBlank() }))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        val seen = mutableSetOf<String>()
+        val list = mutableListOf<String>()
+        for (t in combined) {
+            if (seen.add(t.lowercase())) {
+                list.add(t)
+            }
+        }
+        list
+    }
+
+    fun addNewTag(newTag: String) {
+        val trimmed = newTag.trim()
+        if (trimmed.isNotEmpty()) {
+            localCustomTags = localCustomTags + trimmed
+            currentTag = trimmed
+            customTagInput = trimmed
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -201,18 +229,26 @@ fun TransactionDetailDialog(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Preset quick tag chips
+                        // Available tag chips (Preset + Custom Created)
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            presetTags.forEach { tag ->
+                            allDisplayTags.forEach { tag ->
                                 val isSelected = currentTag.equals(tag, ignoreCase = true)
-                                val tagColor = if (tag == "Self Transfer") Color(0xFF38BDF8) else if (tag == "Coffee") Color(0xFFF59E0B) else Color(0xFF10B981)
+                                val tagColor = when {
+                                    tag.contains("Transfer", ignoreCase = true) || tag.contains("Saving", ignoreCase = true) -> Color(0xFF38BDF8)
+                                    tag.equals("Coffee", ignoreCase = true) -> Color(0xFFF59E0B)
+                                    tag.contains("Shopping", ignoreCase = true) -> Color(0xFFEC4899)
+                                    tag.contains("Food", ignoreCase = true) -> Color(0xFFF97316)
+                                    tag.contains("Bills", ignoreCase = true) -> Color(0xFFA855F7)
+                                    else -> Color(0xFF10B981)
+                                }
                                 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
                                     color = if (isSelected) tagColor else Color(0xFF1E293B),
+                                    border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
                                     modifier = Modifier.clickable {
                                         currentTag = if (isSelected) "" else tag
                                         customTagInput = currentTag
@@ -244,15 +280,31 @@ fun TransactionDetailDialog(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Custom Tag Input
+                        // Custom Tag Input with Instant Add
                         OutlinedTextField(
                             value = customTagInput,
                             onValueChange = {
                                 customTagInput = it
                                 currentTag = it
                             },
-                            label = { Text("Custom Tag (e.g. Coffee, Kaushal)", fontSize = 12.sp) },
+                            label = { Text("Custom Tag (e.g. Coffee, Kaushal, Rent)", fontSize = 12.sp) },
+                            placeholder = { Text("Type new tag name...", fontSize = 12.sp, color = Color(0xFF64748B)) },
                             singleLine = true,
+                            trailingIcon = {
+                                if (customTagInput.trim().isNotBlank()) {
+                                    IconButton(
+                                        onClick = {
+                                            addNewTag(customTagInput)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = "Add Tag to List",
+                                            tint = Color(0xFF10B981)
+                                        )
+                                    }
+                                }
+                            },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF10B981),
                                 unfocusedBorderColor = Color(0xFF334155),
@@ -293,7 +345,11 @@ fun TransactionDetailDialog(
 
                         Button(
                             onClick = {
-                                onSaveTag(currentTag.trim(), applyToAllForPayee)
+                                val finalTag = currentTag.trim()
+                                if (finalTag.isNotEmpty()) {
+                                    addNewTag(finalTag)
+                                }
+                                onSaveTag(finalTag, applyToAllForPayee)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
                             modifier = Modifier.fillMaxWidth()

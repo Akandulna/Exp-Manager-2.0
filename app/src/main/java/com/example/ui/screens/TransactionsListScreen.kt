@@ -70,18 +70,20 @@ fun TransactionsListScreen(
     val selectedType by viewModel.selectedType.collectAsState()
     val selectedSort by viewModel.selectedSort.collectAsState()
     val transactions by viewModel.filteredTransactions.collectAsState()
+    val allTags by viewModel.allTags.collectAsState()
 
-    val categories = listOf(
-        "All",
-        "Food & Dining",
-        "Shopping & Health",
-        "Transport & Fuel",
-        "Bills & Utilities",
-        "Finance & Bills",
-        "Transfers & Savings",
-        "Income & Cashbacks",
-        "Personal & Others"
-    )
+    val categories = remember(allTags) {
+        val base = listOf("All")
+        val combined = base + allTags
+        val seen = mutableSetOf<String>()
+        val list = mutableListOf<String>()
+        for (item in combined) {
+            if (seen.add(item.lowercase())) {
+                list.add(item)
+            }
+        }
+        list
+    }
 
     var sortMenuExpanded by remember { mutableStateOf(false) }
 

@@ -1,15 +1,25 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -17,11 +27,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,15 +49,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.TransactionEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditTransactionDialog(
     transaction: TransactionEntity? = null,
+    availableTags: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (TransactionEntity) -> Unit
 ) {
@@ -73,6 +88,22 @@ fun AddEditTransactionDialog(
     )
 
     var categoryExpanded by remember { mutableStateOf(false) }
+    var localCustomTags by remember { mutableStateOf(emptySet<String>()) }
+    val defaultBase = if (availableTags.isNotEmpty()) availableTags else categories
+
+    val allDisplayTags = remember(defaultBase, localCustomTags, tag) {
+        val combined = (defaultBase + localCustomTags + listOfNotNull(tag.takeIf { it.isNotBlank() }))
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        val seen = mutableSetOf<String>()
+        val list = mutableListOf<String>()
+        for (t in combined) {
+            if (seen.add(t.lowercase())) {
+                list.add(t)
+            }
+        }
+        list
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -218,13 +249,88 @@ fun AddEditTransactionDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Tag / Category Chips
+                Text(
+                    text = "Tag / Label",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color(0xFF94A3B8)
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 6.dp)
+                ) {
+                    allDisplayTags.forEach { item ->
+                        val isSelected = tag.equals(item, ignoreCase = true)
+                        val tagColor = when {
+                            item.contains("Transfer", ignoreCase = true) || item.contains("Saving", ignoreCase = true) -> Color(0xFF38BDF8)
+                            item.equals("Coffee", ignoreCase = true) -> Color(0xFFF59E0B)
+                            item.contains("Shopping", ignoreCase = true) -> Color(0xFFEC4899)
+                            item.contains("Food", ignoreCase = true) -> Color(0xFFF97316)
+                            item.contains("Bills", ignoreCase = true) -> Color(0xFFA855F7)
+                            else -> Color(0xFF10B981)
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) tagColor else Color(0xFF0F172A),
+                            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+                            modifier = Modifier.clickable {
+                                tag = if (isSelected) "" else item
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = item,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) Color.Black else Color(0xFFCBD5E1),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = tag,
                     onValueChange = { tag = it },
-                    label = { Text("Custom Tag (e.g. Coffee, Self Transfer)") },
+                    label = { Text("Custom Tag (e.g. Coffee, Self Transfer, Rent)", fontSize = 12.sp) },
+                    placeholder = { Text("Type new tag name...", fontSize = 12.sp, color = Color(0xFF64748B)) },
                     singleLine = true,
+                    trailingIcon = {
+                        if (tag.trim().isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    val trimmed = tag.trim()
+                                    if (trimmed.isNotEmpty()) {
+                                        localCustomTags = localCustomTags + trimmed
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add Tag",
+                                    tint = Color(0xFF10B981)
+                                )
+                            }
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color(0xFF10B981),
                         unfocusedBorderColor = Color(0xFF475569),
