@@ -69,15 +69,20 @@ fun DashboardScreen(
     val transactions by viewModel.filteredTransactions.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
     
-    val groupedTransactions = androidx.compose.runtime.remember(transactions) {
+    val groupedTransactions = androidx.compose.runtime.remember(transactions, selectedType) {
         transactions
-            .filter { !it.isSelfTransfer }
             .groupBy { if (it.tag.isNotBlank()) it.tag else it.category }
             .mapValues { entry ->
                 val txs = entry.value
-                val totalDebit = txs.filter { it.type == "DEBIT" }.sumOf { it.amount }
-                val totalCredit = txs.filter { it.type == "CREDIT" }.sumOf { it.amount }
-                Pair(totalCredit - totalDebit, txs)
+                val isAllTransfers = txs.all { it.isTransferOrSaving }
+                if (isAllTransfers) {
+                    val total = txs.sumOf { it.amount }
+                    Pair(total, txs)
+                } else {
+                    val totalDebit = txs.filter { it.type == "DEBIT" && !it.isTransferOrSaving }.sumOf { it.amount }
+                    val totalCredit = txs.filter { it.type == "CREDIT" && !it.isTransferOrSaving }.sumOf { it.amount }
+                    Pair(totalCredit - totalDebit, txs)
+                }
             }
             .toList()
             .sortedByDescending { Math.abs(it.second.first) }
@@ -123,14 +128,24 @@ fun DashboardScreen(
             )
         }
 
-        // Active Filter Banner (if filter is selected via Total Spent / Total Received)
+        // Active Filter Banner (if filter is selected via Total Spent / Total Received / Transfer & Savings)
         if (selectedType != "ALL") {
             item {
+                val bannerColor = when (selectedType) {
+                    "DEBIT" -> ExpenseRed
+                    "CREDIT" -> IncomeGreen
+                    else -> Color(0xFF38BDF8)
+                }
+                val bannerText = when (selectedType) {
+                    "DEBIT" -> "Showing: Only Expenses (Total Spent)"
+                    "CREDIT" -> "Showing: Only Income (Total Received)"
+                    else -> "Showing: Transfer & Savings"
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (selectedType == "DEBIT") ExpenseRed.copy(alpha = 0.15f) else IncomeGreen.copy(alpha = 0.15f)
+                        containerColor = bannerColor.copy(alpha = 0.15f)
                     )
                 ) {
                     Row(
@@ -144,12 +159,12 @@ fun DashboardScreen(
                             Icon(
                                 imageVector = Icons.Default.FilterAlt,
                                 contentDescription = "Filtered",
-                                tint = if (selectedType == "DEBIT") ExpenseRed else IncomeGreen,
+                                tint = bannerColor,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (selectedType == "DEBIT") "Showing: Only Expenses (Total Spent)" else "Showing: Only Income (Total Received)",
+                                text = bannerText,
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                                 color = Color.White
                             )
@@ -195,6 +210,7 @@ fun DashboardScreen(
                         text = when (selectedType) {
                             "DEBIT" -> "Expenses by Tag"
                             "CREDIT" -> "Income by Tag"
+                            "TRANSFER" -> "Transfer & Savings by Tag"
                             else -> "View by Tags & Payees"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -278,11 +294,20 @@ fun TagGroupCard(
     onSelectTransaction: (com.example.data.TransactionEntity) -> Unit
 ) {
     val expanded = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    val isIncome = netAmount >= 0 && transactions.any { it.type == "CREDIT" }
-    val isDebit = netAmount < 0 || transactions.all { it.type == "DEBIT" }
+    val isTransferGroup = transactions.all { it.isTransferOrSaving }
+    val isIncome = !isTransferGroup && netAmount >= 0 && transactions.any { it.type == "CREDIT" }
+    val isDebit = !isTransferGroup && (netAmount < 0 || transactions.all { it.type == "DEBIT" })
     
-    val amountColor = if (isDebit) com.example.ui.theme.ExpenseRed else com.example.ui.theme.IncomeGreen
-    val amountPrefix = if (isDebit) "-₹" else "+₹"
+    val amountColor = when {
+        isTransferGroup -> Color(0xFF38BDF8)
+        isDebit -> com.example.ui.theme.ExpenseRed
+        else -> com.example.ui.theme.IncomeGreen
+    }
+    val amountPrefix = when {
+        isTransferGroup -> "₹"
+        isDebit -> "-₹"
+        else -> "+₹"
+    }
     val displayAmount = Math.abs(netAmount)
     
     val (icon, iconBg) = getTagOrCategoryIconAndColor(tagName)
@@ -328,7 +353,7 @@ fun TagGroupCard(
                         color = Color.White
                     )
                     Text(
-                        text = "${transactions.size} transactions",
+                        text = "${transactions.size} transaction${if (transactions.size > 1) "s" else ""}",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF94A3B8)
                     )
@@ -383,11 +408,22 @@ fun TagGroupCard(
                                 )
                             }
                             
+                            val txIsTransfer = tx.isTransferOrSaving
                             val txIsDebit = tx.type == "DEBIT"
+                            val txColor = when {
+                                txIsTransfer -> Color(0xFF38BDF8)
+                                txIsDebit -> ExpenseRed
+                                else -> IncomeGreen
+                            }
+                            val txPrefix = when {
+                                txIsTransfer -> "₹"
+                                txIsDebit -> "-₹"
+                                else -> "+₹"
+                            }
                             Text(
-                                text = "${if (txIsDebit) "-₹" else "+₹"}${String.format(java.util.Locale.US, "%,.2f", tx.amount)}",
+                                text = "$txPrefix${String.format(java.util.Locale.US, "%,.2f", tx.amount)}",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = if (txIsDebit) ExpenseRed else IncomeGreen
+                                color = txColor
                             )
                         }
                         if (index < transactions.size - 1) {

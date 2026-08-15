@@ -27,6 +27,18 @@ data class TransactionEntity(
                 title.contains("Self transfer", ignoreCase = true) ||
                 notes.contains("Self transfer", ignoreCase = true)
 
+    val isTransferOrSaving: Boolean
+        get() = isSelfTransfer ||
+                category.equals("Transfers & Savings", ignoreCase = true) ||
+                category.equals("Transfer & Savings", ignoreCase = true) ||
+                category.equals("Transfers", ignoreCase = true) ||
+                category.equals("Savings", ignoreCase = true) ||
+                tag.equals("Transfers & Savings", ignoreCase = true) ||
+                tag.equals("Transfer & Savings", ignoreCase = true) ||
+                tag.equals("Transfer", ignoreCase = true) ||
+                tag.equals("Savings", ignoreCase = true) ||
+                tag.equals("Self Transfer", ignoreCase = true)
+
     val displayName: String
         get() {
             if (tag.isNotBlank()) return tag

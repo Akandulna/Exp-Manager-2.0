@@ -334,8 +334,8 @@ fun getTagOrCategoryIconAndColor(name: String, isSelfTransfer: Boolean = false):
             Pair(Icons.Default.AccountBalance, Color(0xFF818CF8))
         lower.contains("income") || lower.contains("salary") || lower.contains("cashback") || lower.contains("interest") ->
             Pair(Icons.Default.MonetizationOn, Color(0xFF10B981))
-        lower.contains("transfer") ->
-            Pair(Icons.Default.SwapHoriz, Color(0xFF2DD4BF))
+        lower.contains("transfer") || lower.contains("saving") || lower.contains("investment") ->
+            Pair(Icons.Default.SwapHoriz, Color(0xFF38BDF8))
         else ->
             Pair(Icons.Default.Tag, Color(0xFF10B981))
     }

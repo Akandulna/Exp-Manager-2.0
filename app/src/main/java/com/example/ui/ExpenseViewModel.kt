@@ -51,6 +51,7 @@ sealed class ImportUiState {
 data class ExpenseSummary(
     val totalSpent: Double = 0.0,
     val totalReceived: Double = 0.0,
+    val totalTransfersAndSavings: Double = 0.0,
     val netBalance: Double = 0.0,
     val transactionCount: Int = 0,
     val categoryTotals: Map<String, Double> = emptyMap()
@@ -105,11 +106,14 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         }
 
         if (type == "DEBIT") {
-            // Show only expenses, excluding self-transfers
-            list = list.filter { it.type == "DEBIT" && !it.isSelfTransfer }
+            // Show only expenses, excluding transfers and savings
+            list = list.filter { it.type == "DEBIT" && !it.isTransferOrSaving }
         } else if (type == "CREDIT") {
-            // Show only income, excluding self-transfers
-            list = list.filter { it.type == "CREDIT" && !it.isSelfTransfer }
+            // Show only income, excluding transfers and savings
+            list = list.filter { it.type == "CREDIT" && !it.isTransferOrSaving }
+        } else if (type == "TRANSFER") {
+            // Show only transfers and savings
+            list = list.filter { it.isTransferOrSaving }
         }
 
         when (sort) {
@@ -124,19 +128,21 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
         initialValue = emptyList()
     )
 
-    // Expense Summary Stats (Self Transfer is excluded from expense and income totals)
+    // Expense Summary Stats (Transfer & Savings is separated and excluded from total spent & total received)
     val summaryStats: StateFlow<ExpenseSummary> = _rawTransactions
         .map { transactions ->
             var spent = 0.0
             var received = 0.0
+            var transfersAndSavings = 0.0
             val catMap = mutableMapOf<String, Double>()
 
             transactions.forEach { tx ->
-                // Self transfer does not count as expense or income
-                if (!tx.isSelfTransfer) {
+                if (tx.isTransferOrSaving) {
+                    transfersAndSavings += tx.amount
+                } else {
                     if (tx.type == "DEBIT") {
                         spent += tx.amount
-                        val displayCat = if (tx.tag.isNotBlank() && !tx.isSelfTransfer) tx.tag else tx.category
+                        val displayCat = if (tx.tag.isNotBlank()) tx.tag else tx.category
                         catMap[displayCat] = (catMap[displayCat] ?: 0.0) + tx.amount
                     } else {
                         received += tx.amount
@@ -147,8 +153,9 @@ class ExpenseViewModel(private val repository: TransactionRepository) : ViewMode
             ExpenseSummary(
                 totalSpent = spent,
                 totalReceived = received,
+                totalTransfersAndSavings = transfersAndSavings,
                 netBalance = received - spent,
-                transactionCount = transactions.count { !it.isSelfTransfer },
+                transactionCount = transactions.count { !it.isTransferOrSaving },
                 categoryTotals = catMap
             )
         }.flowOn(Dispatchers.Default).stateIn(

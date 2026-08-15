@@ -20,7 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -51,6 +51,7 @@ fun SummaryHeaderCard(
 ) {
     val isDebitActive = selectedType == "DEBIT"
     val isCreditActive = selectedType == "CREDIT"
+    val isTransferActive = selectedType == "TRANSFER"
 
     Card(
         modifier = modifier
@@ -295,6 +296,98 @@ fun SummaryHeaderCard(
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White
                             )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Transfers & Savings Section Card (Separate from Total Spend / Income)
+                val transferBgColor by animateColorAsState(
+                    targetValue = if (isTransferActive) Color(0xFF38BDF8).copy(alpha = 0.18f) else Color(0xFF161F30),
+                    label = "transfer_bg"
+                )
+                val transferBorderColor by animateColorAsState(
+                    targetValue = if (isTransferActive) Color(0xFF38BDF8) else Color(0xFF334155),
+                    label = "transfer_border"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(transferBgColor)
+                        .border(
+                            width = if (isTransferActive) 1.5.dp else 1.dp,
+                            color = transferBorderColor,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable { onTypeFilterClick("TRANSFER") }
+                        .padding(12.dp)
+                        .testTag("filter_transfer_savings_card")
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF38BDF8).copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SwapHoriz,
+                                    contentDescription = "Transfer & Savings",
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Column {
+                                Text(
+                                    text = "Transfer & Savings",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isTransferActive) Color(0xFF38BDF8) else Color(0xFF94A3B8),
+                                    fontWeight = if (isTransferActive) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                Text(
+                                    text = "Excluded from Total Spent",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF64748B),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = String.format(Locale.US, "₹%,.2f", summary.totalTransfersAndSavings),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF38BDF8)
+                            )
+                            if (isTransferActive) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF38BDF8))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Active",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.Black,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
