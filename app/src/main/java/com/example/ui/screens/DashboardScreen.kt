@@ -41,6 +41,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,9 +77,13 @@ fun DashboardScreen(
     val transactions by viewModel.filteredTransactions.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
     
+    var breakdownFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("ALL") } // "ALL", "TAGS", "PAYEES"
+
+    // Tags have top priority: Only group transactions that HAVE a tag attached
     val tagGroups = androidx.compose.runtime.remember(transactions, selectedType) {
-        transactions
-            .groupBy { if (it.tag.isNotBlank()) it.tag else it.category }
+        val taggedTxs = transactions.filter { it.tag.isNotBlank() }
+        taggedTxs
+            .groupBy { it.tag.trim() }
             .mapValues { entry ->
                 val txs = entry.value
                 val isAllTransfers = txs.all { it.isTransferOrSaving }
@@ -90,13 +97,23 @@ fun DashboardScreen(
                 }
             }
             .toList()
-            .sortedByDescending { Math.abs(it.second.first) }
+            .sortedWith(
+                compareBy<Pair<String, Pair<Double, List<TransactionEntity>>>> { (tagName, _) ->
+                    // Give custom tags top preference (display at the top)
+                    val isCustom = !ExpenseViewModel.DEFAULT_TAGS.any { it.equals(tagName, ignoreCase = true) }
+                    if (isCustom) 0 else 1
+                }.thenByDescending { (_, data) ->
+                    Math.abs(data.first)
+                }
+            )
     }
 
+    // Payees only include transactions that DO NOT have any tag attached
     val payeeGroups = androidx.compose.runtime.remember(transactions, selectedType) {
-        transactions
+        val untaggedTxs = transactions.filter { it.tag.isBlank() }
+        untaggedTxs
             .groupBy {
-                if (it.payee.isNotBlank()) it.payee else if (it.title.isNotBlank()) it.title else "Unknown"
+                if (it.payee.isNotBlank()) it.payee.trim() else if (it.title.isNotBlank()) it.title.trim() else "Unknown"
             }
             .mapValues { entry ->
                 val txs = entry.value
@@ -253,41 +270,118 @@ fun DashboardScreen(
             }
         }
 
-        // Overview Breakdown Section Header
+        // Overview Breakdown Section Header & Filter Controls
         item {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column {
-                    Text(
-                        text = when (selectedType) {
-                            "DEBIT" -> "Expenses Breakdown"
-                            "CREDIT" -> "Income Breakdown"
-                            "TRANSFER" -> "Transfer & Savings"
-                            else -> "View by Tags & Payees"
-                        },
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                    Text(
-                        text = "Side-by-side breakdown by tags and payees",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF64748B)
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = when (selectedType) {
+                                "DEBIT" -> "Expenses Breakdown"
+                                "CREDIT" -> "Income Breakdown"
+                                "TRANSFER" -> "Transfer & Savings"
+                                else -> "Breakdown & Categories"
+                            },
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White
+                        )
+                        Text(
+                            text = if (breakdownFilter == "TAGS") "Prioritizing custom & assigned tags"
+                                   else if (breakdownFilter == "PAYEES") "Displaying untagged transactions by payee"
+                                   else "Tags take priority; untagged shown as payees",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+                    TextButton(onClick = onNavigateToTransactions) {
+                        Text(
+                            text = "All Transactions",
+                            color = Color(0xFF10B981),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
-                TextButton(onClick = onNavigateToTransactions) {
-                    Text(
-                        text = "All Transactions",
-                        color = Color(0xFF10B981),
-                        style = MaterialTheme.typography.labelMedium
-                    )
+
+                // Breakdown Filter Toggle Buttons (All / Tags / Payees)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // ALL Filter Chip
+                    val isAllSelected = breakdownFilter == "ALL"
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isAllSelected) Color(0xFFDC2626) else Color(0xFF1E293B))
+                            .clickable { breakdownFilter = "ALL" }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "All (${tagGroups.size + payeeGroups.size})",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
+                            ),
+                            color = if (isAllSelected) Color.White else Color(0xFF94A3B8)
+                        )
+                    }
+
+                    // TAGS Filter Chip
+                    val isTagsSelected = breakdownFilter == "TAGS"
+                    Box(
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isTagsSelected) Color(0xFF0284C7) else Color(0xFF1E293B))
+                            .clickable { breakdownFilter = "TAGS" }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "🏷️ Tags (${tagGroups.size})",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isTagsSelected) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = if (isTagsSelected) Color.White else Color(0xFF38BDF8)
+                            )
+                        }
+                    }
+
+                    // PAYEES Filter Chip
+                    val isPayeesSelected = breakdownFilter == "PAYEES"
+                    Box(
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isPayeesSelected) Color(0xFF059669) else Color(0xFF1E293B))
+                            .clickable { breakdownFilter = "PAYEES" }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "👤 Payees (${payeeGroups.size})",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isPayeesSelected) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = if (isPayeesSelected) Color.White else Color(0xFF10B981)
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Empty state or 2-column breakdown list
+        // Empty state or Breakdown list
         if (tagGroups.isEmpty() && payeeGroups.isEmpty()) {
             item {
                 Card(
@@ -324,137 +418,245 @@ fun DashboardScreen(
                 }
             }
         } else {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Column 1: By Tags
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Column 1 Header
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E293B))
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "🏷️ Tags",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFF38BDF8)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF0284C7).copy(alpha = 0.25f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            // View mode based on breakdownFilter: "ALL", "TAGS", "PAYEES"
+            when (breakdownFilter) {
+                "TAGS" -> {
+                    if (tagGroups.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
                             ) {
-                                Text(
-                                    text = "${tagGroups.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF38BDF8)
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("No tagged transactions yet.", color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodyMedium)
+                                    Text("Transactions with custom tags will appear at the top.", color = Color(0xFF64748B), style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
-
-                        if (tagGroups.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No tags",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF64748B)
-                                )
-                            }
-                        } else {
-                            tagGroups.forEach { (tagName, data) ->
-                                val (netAmount, txs) = data
-                                BreakdownColumnCard(
-                                    title = tagName,
-                                    isTag = true,
-                                    netAmount = netAmount,
-                                    transactions = txs,
-                                    onSelectTransaction = onSelectTransaction,
-                                    onOpenGroupPage = { onOpenGroupPage(tagName, true) }
-                                )
+                    } else {
+                        // 2-column grid of tags
+                        val chunked = tagGroups.chunked(2)
+                        chunked.forEach { rowPairs ->
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    rowPairs.forEach { (tagName, data) ->
+                                        val (netAmount, txs) = data
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            BreakdownColumnCard(
+                                                title = tagName,
+                                                isTag = true,
+                                                netAmount = netAmount,
+                                                transactions = txs,
+                                                onSelectTransaction = onSelectTransaction,
+                                                onOpenGroupPage = { onOpenGroupPage(tagName, true) }
+                                            )
+                                        }
+                                    }
+                                    if (rowPairs.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
                             }
                         }
                     }
-
-                    // Column 2: By Payees
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Column 2 Header
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E293B))
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "👤 Payees",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFF10B981)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF059669).copy(alpha = 0.25f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                }
+                "PAYEES" -> {
+                    if (payeeGroups.isEmpty()) {
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
                             ) {
-                                Text(
-                                    text = "${payeeGroups.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF10B981)
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("No untagged payees.", color = Color(0xFF94A3B8), style = MaterialTheme.typography.bodyMedium)
+                                    Text("All transactions currently have tags attached.", color = Color(0xFF64748B), style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
-
-                        if (payeeGroups.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No payees",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF64748B)
-                                )
+                    } else {
+                        // 2-column grid of payees
+                        val chunked = payeeGroups.chunked(2)
+                        chunked.forEach { rowPairs ->
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    rowPairs.forEach { (payeeName, data) ->
+                                        val (netAmount, txs) = data
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            BreakdownColumnCard(
+                                                title = payeeName,
+                                                isTag = false,
+                                                netAmount = netAmount,
+                                                transactions = txs,
+                                                onSelectTransaction = onSelectTransaction,
+                                                onOpenGroupPage = { onOpenGroupPage(payeeName, false) }
+                                            )
+                                        }
+                                    }
+                                    if (rowPairs.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
                             }
-                        } else {
-                            payeeGroups.forEach { (payeeName, data) ->
-                                val (netAmount, txs) = data
-                                BreakdownColumnCard(
-                                    title = payeeName,
-                                    isTag = false,
-                                    netAmount = netAmount,
-                                    transactions = txs,
-                                    onSelectTransaction = onSelectTransaction,
-                                    onOpenGroupPage = { onOpenGroupPage(payeeName, false) }
-                                )
+                        }
+                    }
+                }
+                else -> {
+                    // "ALL" side-by-side view with interactive headers
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Column 1: By Tags
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                // Column 1 Header (Interactive filter button)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF1E293B))
+                                        .clickable { breakdownFilter = "TAGS" }
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "🏷️ Tags",
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFF0284C7).copy(alpha = 0.25f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${tagGroups.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF38BDF8)
+                                        )
+                                    }
+                                }
+
+                                if (tagGroups.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No tags",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF64748B)
+                                        )
+                                    }
+                                } else {
+                                    tagGroups.forEach { (tagName, data) ->
+                                        val (netAmount, txs) = data
+                                        BreakdownColumnCard(
+                                            title = tagName,
+                                            isTag = true,
+                                            netAmount = netAmount,
+                                            transactions = txs,
+                                            onSelectTransaction = onSelectTransaction,
+                                            onOpenGroupPage = { onOpenGroupPage(tagName, true) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Column 2: By Untagged Payees
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                // Column 2 Header (Interactive filter button)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF1E293B))
+                                        .clickable { breakdownFilter = "PAYEES" }
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "👤 Payees",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = Color(0xFF10B981)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Color(0xFF059669).copy(alpha = 0.25f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${payeeGroups.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF10B981)
+                                        )
+                                    }
+                                }
+
+                                if (payeeGroups.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "No untagged payees",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color(0xFF64748B)
+                                        )
+                                    }
+                                } else {
+                                    payeeGroups.forEach { (payeeName, data) ->
+                                        val (netAmount, txs) = data
+                                        BreakdownColumnCard(
+                                            title = payeeName,
+                                            isTag = false,
+                                            netAmount = netAmount,
+                                            transactions = txs,
+                                            onSelectTransaction = onSelectTransaction,
+                                            onOpenGroupPage = { onOpenGroupPage(payeeName, false) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -479,6 +681,7 @@ fun BreakdownColumnCard(
 ) {
     val isTransferGroup = transactions.all { it.isTransferOrSaving }
     val isDebit = !isTransferGroup && (netAmount < 0 || transactions.all { it.type == "DEBIT" })
+    val isCustomTag = isTag && !ExpenseViewModel.DEFAULT_TAGS.any { it.equals(title, ignoreCase = true) }
     
     val amountColor = when {
         isTransferGroup -> Color(0xFF38BDF8)
@@ -498,7 +701,10 @@ fun BreakdownColumnCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable { onOpenGroupPage() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isCustomTag) Color(0xFF1E2638) else Color(0xFF1E293B)
+        ),
+        border = if (isCustomTag) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)) else null,
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -506,7 +712,7 @@ fun BreakdownColumnCard(
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            // Header: Icon + Title
+            // Header: Icon + Title + (Custom Tag Badge if applicable)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -515,27 +721,36 @@ fun BreakdownColumnCard(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(iconBg.copy(alpha = 0.2f)),
+                        .background((if (isCustomTag) Color(0xFFF59E0B) else iconBg).copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        tint = iconBg,
+                        tint = if (isCustomTag) Color(0xFFFBBF24) else iconBg,
                         modifier = Modifier.size(15.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                    if (isCustomTag) {
+                        Text(
+                            text = "✨ Custom Tag",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFFFBBF24),
+                            fontSize = 9.sp
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -85,11 +85,13 @@ fun TagPayeeDetailScreen(
     val groupTransactions = remember(allTransactions, groupTitle, isTag) {
         allTransactions.filter { tx ->
             if (isTag) {
-                val txTag = if (tx.tag.isNotBlank()) tx.tag else tx.category
-                txTag.equals(groupTitle, ignoreCase = true)
+                // If tag, match transactions where tag matches groupTitle
+                tx.tag.trim().equals(groupTitle.trim(), ignoreCase = true)
             } else {
-                val txPayee = if (tx.payee.isNotBlank()) tx.payee else tx.title
-                txPayee.equals(groupTitle, ignoreCase = true)
+                // If payee, only match untagged transactions for this payee
+                val isUntagged = tx.tag.isBlank()
+                val payeeName = if (tx.payee.isNotBlank()) tx.payee.trim() else if (tx.title.isNotBlank()) tx.title.trim() else "Unknown"
+                isUntagged && payeeName.equals(groupTitle.trim(), ignoreCase = true)
             }
         }
     }
