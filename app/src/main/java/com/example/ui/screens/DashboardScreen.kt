@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -70,6 +72,7 @@ fun DashboardScreen(
     onSelectTransaction: (TransactionEntity) -> Unit,
     hasNewUpdate: Boolean = false,
     onCheckUpdate: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     onOpenGroupPage: (title: String, isTag: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
@@ -158,12 +161,18 @@ fun DashboardScreen(
                     )
                 }
 
-                // Update App Button (Only displayed when there is a new update available)
-                if (hasNewUpdate) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Update App Button (Always Displayed)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFDC2626).copy(alpha = 0.2f))
+                            .background(
+                                if (hasNewUpdate) Color(0xFFDC2626).copy(alpha = 0.25f)
+                                else Color(0xFF1E293B)
+                            )
                             .clickable { onCheckUpdate() }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                             .testTag("btn_check_update")
@@ -173,17 +182,34 @@ fun DashboardScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SystemUpdate,
-                                contentDescription = "New Update Available",
-                                tint = Color(0xFFEF4444),
+                                contentDescription = if (hasNewUpdate) "New Update Available" else "Check for Updates",
+                                tint = if (hasNewUpdate) Color(0xFFEF4444) else Color(0xFF38BDF8),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Update",
+                                text = if (hasNewUpdate) "Update Available" else "Update",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFFEF4444)
+                                color = if (hasNewUpdate) Color(0xFFEF4444) else Color.White
                             )
                         }
+                    }
+
+                    // Settings Button
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1E293B))
+                            .testTag("btn_dashboard_settings")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }

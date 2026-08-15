@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +37,7 @@ import com.example.ui.components.TransactionDetailDialog
 import com.example.ui.components.UpdateDialog
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.PdfImportScreen
+import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.TagPayeeDetailScreen
 import com.example.ui.screens.TransactionsListScreen
 import com.example.util.AppUpdateManager
@@ -152,6 +154,21 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                         ),
                         modifier = Modifier.testTag("nav_tab_pdf_reader")
                     )
+
+                    NavigationBarItem(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", modifier = Modifier.size(20.dp)) },
+                        label = { Text("Settings") },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color(0xFFEF4444),
+                            indicatorColor = Color(0xFFDC2626),
+                            unselectedIconColor = Color(0xFF94A3B8),
+                            unselectedTextColor = Color(0xFF94A3B8)
+                        ),
+                        modifier = Modifier.testTag("nav_tab_settings")
+                    )
                 }
             },
             floatingActionButton = {
@@ -180,6 +197,7 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                         viewModel = viewModel,
                         onNavigateToTransactions = { selectedTab = 1 },
                         onNavigateToPdfImport = { selectedTab = 2 },
+                        onNavigateToSettings = { selectedTab = 3 },
                         onAddTransaction = {
                             editingTransaction = null
                             showAddDialog = true
@@ -202,6 +220,13 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                         }
                     )
                     2 -> PdfImportScreen(viewModel = viewModel)
+                    3 -> SettingsScreen(
+                        viewModel = viewModel,
+                        hasNewUpdate = hasNewUpdate,
+                        onCheckUpdate = {
+                            showUpdateDialog = true
+                        }
+                    )
                 }
             }
         }
