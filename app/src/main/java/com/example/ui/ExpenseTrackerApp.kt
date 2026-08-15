@@ -171,6 +171,9 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                 },
                 onInstallClick = { file ->
                     updateManager.installApk(file)
+                },
+                onOpenBrowserClick = {
+                    updateManager.openBrowserReleases()
                 }
             )
         }

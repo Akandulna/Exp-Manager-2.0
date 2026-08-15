@@ -16,19 +16,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,7 +47,8 @@ fun UpdateDialog(
     updateState: UpdateState,
     onDismiss: () -> Unit,
     onDownloadClick: () -> Unit,
-    onInstallClick: (File) -> Unit
+    onInstallClick: (File) -> Unit,
+    onOpenBrowserClick: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -85,7 +85,7 @@ fun UpdateDialog(
                 when (updateState) {
                     is UpdateState.Idle -> {
                         Text(
-                            text = "Download the latest version directly from GitHub Releases and install it without losing any data.",
+                            text = "Download and apply the latest version directly from GitHub Releases without losing any data.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFFCBD5E1)
                         )
@@ -96,7 +96,7 @@ fun UpdateDialog(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "Permanent Release Channel:",
+                                    text = "Release Channel:",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF64748B)
                                 )
@@ -114,25 +114,57 @@ fun UpdateDialog(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .padding(vertical = 12.dp)
                         ) {
-                            CircularProgressIndicator(
-                                color = Color(0xFF10B981),
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "Downloading latest APK...",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                                 color = Color.White
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Please wait, the installer will launch automatically once finished.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF94A3B8)
-                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (updateState.progress > 0) {
+                                LinearProgressIndicator(
+                                    progress = { updateState.progress / 100f },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = Color(0xFF10B981),
+                                    trackColor = Color(0xFF334155)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "${updateState.progress}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF10B981),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "${updateState.downloadedMb} / ${updateState.totalMb}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = Color(0xFF10B981),
+                                    trackColor = Color(0xFF334155)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Connecting to server (${updateState.downloadedMb})...",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF94A3B8)
+                                )
+                            }
                         }
                     }
 
@@ -165,25 +197,49 @@ fun UpdateDialog(
                     }
 
                     is UpdateState.Error -> {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFEF4444).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Error,
-                                contentDescription = "Error",
-                                tint = Color(0xFFEF4444),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = updateState.message,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFCA5A5)
-                            )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFEF4444).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Error,
+                                    contentDescription = "Error",
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = updateState.message,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFFCA5A5)
+                                )
+                            }
+
+                            if (updateState.canOpenBrowser) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = onOpenBrowserClick,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.OpenInBrowser,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = Color(0xFF38BDF8)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Open GitHub Releases in Browser",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Color(0xFF38BDF8)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
