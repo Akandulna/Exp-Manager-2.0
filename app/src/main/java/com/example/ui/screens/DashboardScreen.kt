@@ -72,9 +72,30 @@ fun DashboardScreen(
     val transactions by viewModel.filteredTransactions.collectAsState()
     val selectedType by viewModel.selectedType.collectAsState()
     
-    val groupedTransactions = androidx.compose.runtime.remember(transactions, selectedType) {
+    val tagGroups = androidx.compose.runtime.remember(transactions, selectedType) {
         transactions
             .groupBy { if (it.tag.isNotBlank()) it.tag else it.category }
+            .mapValues { entry ->
+                val txs = entry.value
+                val isAllTransfers = txs.all { it.isTransferOrSaving }
+                if (isAllTransfers) {
+                    val total = txs.sumOf { it.amount }
+                    Pair(total, txs)
+                } else {
+                    val totalDebit = txs.filter { it.type == "DEBIT" && !it.isTransferOrSaving }.sumOf { it.amount }
+                    val totalCredit = txs.filter { it.type == "CREDIT" && !it.isTransferOrSaving }.sumOf { it.amount }
+                    Pair(totalCredit - totalDebit, txs)
+                }
+            }
+            .toList()
+            .sortedByDescending { Math.abs(it.second.first) }
+    }
+
+    val payeeGroups = androidx.compose.runtime.remember(transactions, selectedType) {
+        transactions
+            .groupBy {
+                if (it.payee.isNotBlank()) it.payee else if (it.title.isNotBlank()) it.title else "Unknown"
+            }
             .mapValues { entry ->
                 val txs = entry.value
                 val isAllTransfers = txs.all { it.isTransferOrSaving }
@@ -228,7 +249,7 @@ fun DashboardScreen(
             }
         }
 
-        // Overview Tagged Transactions Header
+        // Overview Breakdown Section Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -238,16 +259,16 @@ fun DashboardScreen(
                 Column {
                     Text(
                         text = when (selectedType) {
-                            "DEBIT" -> "Expenses by Tag"
-                            "CREDIT" -> "Income by Tag"
-                            "TRANSFER" -> "Transfer & Savings by Tag"
+                            "DEBIT" -> "Expenses Breakdown"
+                            "CREDIT" -> "Income Breakdown"
+                            "TRANSFER" -> "Transfer & Savings"
                             else -> "View by Tags & Payees"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
                     Text(
-                        text = "Tap any tag to view transactions",
+                        text = "Side-by-side breakdown by tags and payees",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFF64748B)
                     )
@@ -262,8 +283,8 @@ fun DashboardScreen(
             }
         }
 
-        // Empty state or transaction list
-        if (groupedTransactions.isEmpty()) {
+        // Empty state or 2-column breakdown list
+        if (tagGroups.isEmpty() && payeeGroups.isEmpty()) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -299,14 +320,139 @@ fun DashboardScreen(
                 }
             }
         } else {
-            items(groupedTransactions, key = { it.first }) { (tagName, data) ->
-                val (netAmount, txs) = data
-                TagGroupCard(
-                    tagName = tagName,
-                    netAmount = netAmount,
-                    transactions = txs,
-                    onSelectTransaction = onSelectTransaction
-                )
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Column 1: By Tags
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Column 1 Header
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF1E293B))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "🏷️ Tags",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF38BDF8)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF0284C7).copy(alpha = 0.25f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${tagGroups.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF38BDF8)
+                                )
+                            }
+                        }
+
+                        if (tagGroups.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No tags",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        } else {
+                            tagGroups.forEach { (tagName, data) ->
+                                val (netAmount, txs) = data
+                                BreakdownColumnCard(
+                                    title = tagName,
+                                    isTag = true,
+                                    netAmount = netAmount,
+                                    transactions = txs,
+                                    onSelectTransaction = onSelectTransaction
+                                )
+                            }
+                        }
+                    }
+
+                    // Column 2: By Payees
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Column 2 Header
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF1E293B))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "👤 Payees",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF10B981)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF059669).copy(alpha = 0.25f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${payeeGroups.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF10B981)
+                                )
+                            }
+                        }
+
+                        if (payeeGroups.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF1E293B), RoundedCornerShape(12.dp))
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No payees",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF64748B)
+                                )
+                            }
+                        } else {
+                            payeeGroups.forEach { (payeeName, data) ->
+                                val (netAmount, txs) = data
+                                BreakdownColumnCard(
+                                    title = payeeName,
+                                    isTag = false,
+                                    netAmount = netAmount,
+                                    transactions = txs,
+                                    onSelectTransaction = onSelectTransaction
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -317,15 +463,15 @@ fun DashboardScreen(
 }
 
 @Composable
-fun TagGroupCard(
-    tagName: String,
+fun BreakdownColumnCard(
+    title: String,
+    isTag: Boolean,
     netAmount: Double,
     transactions: List<com.example.data.TransactionEntity>,
     onSelectTransaction: (com.example.data.TransactionEntity) -> Unit
 ) {
     val expanded = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val isTransferGroup = transactions.all { it.isTransferOrSaving }
-    val isIncome = !isTransferGroup && netAmount >= 0 && transactions.any { it.type == "CREDIT" }
     val isDebit = !isTransferGroup && (netAmount < 0 || transactions.all { it.type == "DEBIT" })
     
     val amountColor = when {
@@ -339,125 +485,149 @@ fun TagGroupCard(
         else -> "+₹"
     }
     val displayAmount = Math.abs(netAmount)
-    
-    val (icon, iconBg) = getTagOrCategoryIconAndColor(tagName)
+    val (icon, iconBg) = getTagOrCategoryIconAndColor(title)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .clickable { expanded.value = !expanded.value },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp)
+        ) {
+            // Header: Icon + Title
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Icon
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(iconBg.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
-                        contentDescription = tagName,
+                        contentDescription = title,
                         tint = iconBg,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                // Title & Count
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = tagName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                    Text(
-                        text = "${transactions.size} transaction${if (transactions.size > 1) "s" else ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-
-                // Amount & Chevron
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "$amountPrefix${String.format(java.util.Locale.US, "%,.2f", displayAmount)}",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = amountColor
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (expanded.value) "Hide" else "Show",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF64748B)
-                    )
-                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
-            // Expanded List
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Amount
+            Text(
+                text = "$amountPrefix${String.format(Locale.US, "%,.2f", displayAmount)}",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = amountColor,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Transaction count & toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${transactions.size} txn${if (transactions.size > 1) "s" else ""}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF94A3B8),
+                    fontSize = 11.sp
+                )
+
+                Text(
+                    text = if (expanded.value) "▲ Hide" else "▼ Details",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (expanded.value) Color(0xFF38BDF8) else Color(0xFF64748B),
+                    fontSize = 10.sp
+                )
+            }
+
+            // Expanded Transaction Items
             androidx.compose.animation.AnimatedVisibility(visible = expanded.value) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color(0xFF0F172A).copy(alpha = 0.5f))
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(top = 8.dp)
+                        .background(Color(0xFF0F172A).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 6.dp, vertical = 6.dp)
                 ) {
                     transactions.forEachIndexed { index, tx ->
-                        Row(
+                        val txIsTransfer = tx.isTransferOrSaving
+                        val txIsDebit = tx.type == "DEBIT"
+                        val txColor = when {
+                            txIsTransfer -> Color(0xFF38BDF8)
+                            txIsDebit -> ExpenseRed
+                            else -> IncomeGreen
+                        }
+                        val txPrefix = when {
+                            txIsTransfer -> "₹"
+                            txIsDebit -> "-₹"
+                            else -> "+₹"
+                        }
+
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .clickable { onSelectTransaction(tx) }
-                                .padding(vertical = 8.dp, horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(vertical = 4.dp, horizontal = 4.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (tx.payee.isNotBlank()) tx.payee else tx.title,
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
+                            Text(
+                                text = if (isTag) (if (tx.payee.isNotBlank()) tx.payee else tx.title) else (if (tx.tag.isNotBlank()) "🏷️ ${tx.tag}" else tx.category),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     text = tx.date,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF64748B)
+                                    color = Color(0xFF64748B),
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    text = "$txPrefix${String.format(Locale.US, "%,.2f", tx.amount)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = txColor,
+                                    fontSize = 11.sp
                                 )
                             }
-                            
-                            val txIsTransfer = tx.isTransferOrSaving
-                            val txIsDebit = tx.type == "DEBIT"
-                            val txColor = when {
-                                txIsTransfer -> Color(0xFF38BDF8)
-                                txIsDebit -> ExpenseRed
-                                else -> IncomeGreen
-                            }
-                            val txPrefix = when {
-                                txIsTransfer -> "₹"
-                                txIsDebit -> "-₹"
-                                else -> "+₹"
-                            }
-                            Text(
-                                text = "$txPrefix${String.format(java.util.Locale.US, "%,.2f", tx.amount)}",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = txColor
-                            )
                         }
                         if (index < transactions.size - 1) {
-                            androidx.compose.material3.HorizontalDivider(color = Color(0xFF334155).copy(alpha = 0.5f), thickness = 1.dp)
+                            androidx.compose.material3.HorizontalDivider(
+                                color = Color(0xFF334155).copy(alpha = 0.4f),
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
                         }
                     }
                 }
