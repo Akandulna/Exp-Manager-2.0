@@ -12,13 +12,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BluePrimary,
+    primary = RedPrimary,
     onPrimary = Color.White,
-    primaryContainer = BlueDark,
+    primaryContainer = RedDark,
     onPrimaryContainer = Color.White,
-    secondary = AccentSky,
-    onSecondary = Color.Black,
-    tertiary = AccentCyan,
+    secondary = AccentCoral,
+    onSecondary = Color.White,
+    tertiary = AccentGold,
     background = IndigoDark,
     onBackground = TextPrimary,
     surface = SlateSurface,
@@ -30,13 +30,13 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = BlueDark,
+    primary = RedDark,
     onPrimary = Color.White,
-    primaryContainer = BlueLight,
-    onPrimaryContainer = BlueDark,
-    secondary = AccentSky,
-    onSecondary = Color.Black,
-    tertiary = AccentCyan,
+    primaryContainer = RedLight,
+    onPrimaryContainer = RedDark,
+    secondary = AccentCoral,
+    onSecondary = Color.White,
+    tertiary = AccentGold,
     background = Color(0xFFF8FAFC),
     onBackground = Color(0xFF0F172A),
     surface = Color.White,
@@ -50,7 +50,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun ExpenseTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Set false for consistent blue branding
+    dynamicColor: Boolean = false, // Set false for consistent red branding
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

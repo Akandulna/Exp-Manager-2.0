@@ -76,13 +76,13 @@ fun UpdateDialog(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF3B82F6).copy(alpha = 0.2f)),
+                        .background(Color(0xFFEF4444).copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.SystemUpdate,
                         contentDescription = "App Update",
-                        tint = Color(0xFF3B82F6),
+                        tint = Color(0xFFEF4444),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -118,7 +118,7 @@ fun UpdateDialog(
                                 Text(
                                     text = "Akandulna/Exp-Manager-2.0",
                                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color(0xFF38BDF8)
+                                    color = Color(0xFFFCA5A5)
                                 )
                             }
                         }
@@ -133,7 +133,7 @@ fun UpdateDialog(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFF3B82F6),
+                                    focusedBorderColor = Color(0xFFEF4444),
                                     unfocusedBorderColor = Color(0xFF334155),
                                     focusedTextColor = Color.White,
                                     unfocusedTextColor = Color.White
@@ -165,7 +165,7 @@ fun UpdateDialog(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             CircularProgressIndicator(
-                                color = Color(0xFF3B82F6),
+                                color = Color(0xFFEF4444),
                                 modifier = Modifier.size(36.dp)
                             )
                             Spacer(modifier = Modifier.height(14.dp))
@@ -196,7 +196,7 @@ fun UpdateDialog(
                                         .fillMaxWidth()
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(4.dp)),
-                                    color = Color(0xFF3B82F6),
+                                    color = Color(0xFFEF4444),
                                     trackColor = Color(0xFF334155)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -207,7 +207,7 @@ fun UpdateDialog(
                                     Text(
                                         text = "${updateState.progress}%",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF3B82F6),
+                                        color = Color(0xFFEF4444),
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
@@ -222,7 +222,7 @@ fun UpdateDialog(
                                         .fillMaxWidth()
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(4.dp)),
-                                    color = Color(0xFF3B82F6),
+                                    color = Color(0xFFEF4444),
                                     trackColor = Color(0xFF334155)
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -245,7 +245,7 @@ fun UpdateDialog(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = "Download complete",
-                                tint = Color(0xFF3B82F6),
+                                tint = Color(0xFFEF4444),
                                 modifier = Modifier.size(48.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -296,7 +296,7 @@ fun UpdateDialog(
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color(0xFF3B82F6),
+                                    focusedBorderColor = Color(0xFFEF4444),
                                     unfocusedBorderColor = Color(0xFF334155),
                                     focusedTextColor = Color.White,
                                     unfocusedTextColor = Color.White
@@ -315,13 +315,13 @@ fun UpdateDialog(
                                         imageVector = Icons.Default.OpenInBrowser,
                                         contentDescription = null,
                                         modifier = Modifier.size(16.dp),
-                                        tint = Color(0xFF38BDF8)
+                                        tint = Color(0xFFF87171)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "Open GitHub Releases Page",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = Color(0xFF38BDF8)
+                                        color = Color(0xFFF87171)
                                     )
                                 }
                             }
@@ -335,7 +335,7 @@ fun UpdateDialog(
                 is UpdateState.Idle -> {
                     Button(
                         onClick = { onDownloadClick(customUrl.takeIf { it.isNotBlank() }) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                         modifier = Modifier.testTag("btn_download_update")
                     ) {
                         Icon(
@@ -356,7 +356,7 @@ fun UpdateDialog(
                 is UpdateState.ReadyToInstall -> {
                     Button(
                         onClick = { onInstallClick(updateState.apkFile) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                         modifier = Modifier.testTag("btn_install_update")
                     ) {
                         Text(
@@ -370,7 +370,7 @@ fun UpdateDialog(
                 is UpdateState.Error -> {
                     Button(
                         onClick = { onDownloadClick(customUrl.takeIf { it.isNotBlank() }) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,

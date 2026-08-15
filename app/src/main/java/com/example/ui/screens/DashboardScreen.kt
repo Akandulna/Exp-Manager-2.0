@@ -154,14 +154,14 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.SystemUpdate,
                             contentDescription = "Update App",
-                            tint = Color(0xFF3B82F6),
+                            tint = Color(0xFFEF4444),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Update",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF3B82F6)
+                            color = Color(0xFFEF4444)
                         )
                     }
                 }

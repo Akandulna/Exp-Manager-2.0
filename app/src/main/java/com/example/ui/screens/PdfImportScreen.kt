@@ -105,13 +105,13 @@ fun PdfImportScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
+                        .background(Color(0xFFEF4444).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.UploadFile,
                         contentDescription = "Upload PDF",
-                        tint = Color(0xFF3B82F6),
+                        tint = Color(0xFFEF4444),
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -132,7 +132,7 @@ fun PdfImportScreen(
 
                 Button(
                     onClick = { pdfPickerLauncher.launch("application/pdf") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -167,7 +167,7 @@ fun PdfImportScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFF3B82F6))
+                        CircularProgressIndicator(color = Color(0xFFEF4444))
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Reading PDF and extracting transactions...",
@@ -262,7 +262,7 @@ fun PdfImportScreen(
 
                         Button(
                             onClick = { viewModel.confirmImport(state.transactions, state.sourceName) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                             modifier = Modifier.testTag("confirm_import_button")
                         ) {
                             Text(

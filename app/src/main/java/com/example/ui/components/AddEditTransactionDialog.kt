@@ -155,9 +155,9 @@ fun AddEditTransactionDialog(
                     label = { Text("Title / Purpose") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -175,9 +175,9 @@ fun AddEditTransactionDialog(
                     label = { Text("Payee / Vendor Name") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -196,9 +196,9 @@ fun AddEditTransactionDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -221,9 +221,9 @@ fun AddEditTransactionDialog(
                         label = { Text("Category") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF3B82F6),
+                            focusedBorderColor = Color(0xFFEF4444),
                             unfocusedBorderColor = Color(0xFF475569),
-                            focusedLabelColor = Color(0xFF3B82F6),
+                            focusedLabelColor = Color(0xFFEF4444),
                             unfocusedLabelColor = Color(0xFF94A3B8),
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White
@@ -272,7 +272,7 @@ fun AddEditTransactionDialog(
                             item.contains("Shopping", ignoreCase = true) -> Color(0xFFEC4899)
                             item.contains("Food", ignoreCase = true) -> Color(0xFFF97316)
                             item.contains("Bills", ignoreCase = true) -> Color(0xFFA855F7)
-                            else -> Color(0xFF3B82F6)
+                            else -> Color(0xFFEF4444)
                         }
 
                         Surface(
@@ -326,15 +326,15 @@ fun AddEditTransactionDialog(
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = "Add Tag",
-                                    tint = Color(0xFF3B82F6)
+                                    tint = Color(0xFFEF4444)
                                 )
                             }
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -350,9 +350,9 @@ fun AddEditTransactionDialog(
                     label = { Text("UPI Transaction ID (Optional)") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -367,9 +367,9 @@ fun AddEditTransactionDialog(
                     onValueChange = { notes = it },
                     label = { Text("Notes (Optional)") },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF3B82F6),
+                        focusedBorderColor = Color(0xFFEF4444),
                         unfocusedBorderColor = Color(0xFF475569),
-                        focusedLabelColor = Color(0xFF3B82F6),
+                        focusedLabelColor = Color(0xFFEF4444),
                         unfocusedLabelColor = Color(0xFF94A3B8),
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
@@ -406,7 +406,7 @@ fun AddEditTransactionDialog(
                         onSave(item)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                 modifier = Modifier.testTag("save_transaction_button")
             ) {
                 Text(text = if (isEdit) "Update" else "Save", color = Color.White, fontWeight = FontWeight.Bold)

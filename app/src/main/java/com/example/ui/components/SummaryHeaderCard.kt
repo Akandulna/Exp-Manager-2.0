@@ -103,7 +103,7 @@ fun SummaryHeaderCard(
                                     Text(
                                         text = "Tap to Show All",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF38BDF8),
+                                        color = Color(0xFFFCA5A5),
                                         fontSize = 10.sp
                                     )
                                 }

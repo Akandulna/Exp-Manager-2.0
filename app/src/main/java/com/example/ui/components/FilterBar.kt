@@ -46,14 +46,14 @@ fun FilterBar(
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFF2563EB),
+                    selectedContainerColor = Color(0xFFDC2626),
                     containerColor = Color(0xFF1E293B)
                 ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
                     borderColor = Color(0xFF334155),
-                    selectedBorderColor = Color(0xFF3B82F6)
+                    selectedBorderColor = Color(0xFFEF4444)
                 )
             )
         }

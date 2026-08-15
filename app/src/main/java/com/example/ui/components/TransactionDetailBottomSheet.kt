@@ -217,7 +217,7 @@ fun TransactionDetailDialog(
                             Icon(
                                 imageVector = Icons.Default.Tag,
                                 contentDescription = "Tag",
-                                tint = Color(0xFF3B82F6),
+                                tint = Color(0xFFEF4444),
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
@@ -242,7 +242,7 @@ fun TransactionDetailDialog(
                                     tag.contains("Shopping", ignoreCase = true) -> Color(0xFFEC4899)
                                     tag.contains("Food", ignoreCase = true) -> Color(0xFFF97316)
                                     tag.contains("Bills", ignoreCase = true) -> Color(0xFFA855F7)
-                                    else -> Color(0xFF3B82F6)
+                                    else -> Color(0xFFEF4444)
                                 }
                                 
                                 Surface(
@@ -300,15 +300,15 @@ fun TransactionDetailDialog(
                                         Icon(
                                             imageVector = Icons.Default.Add,
                                             contentDescription = "Add Tag to List",
-                                            tint = Color(0xFF3B82F6)
+                                            tint = Color(0xFFEF4444)
                                         )
                                     }
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF3B82F6),
+                                focusedBorderColor = Color(0xFFEF4444),
                                 unfocusedBorderColor = Color(0xFF334155),
-                                focusedLabelColor = Color(0xFF3B82F6),
+                                focusedLabelColor = Color(0xFFEF4444),
                                 unfocusedLabelColor = Color(0xFF94A3B8),
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White
@@ -328,7 +328,7 @@ fun TransactionDetailDialog(
                                     checked = applyToAllForPayee,
                                     onCheckedChange = { applyToAllForPayee = it },
                                     colors = CheckboxDefaults.colors(
-                                        checkedColor = Color(0xFF3B82F6),
+                                        checkedColor = Color(0xFFEF4444),
                                         checkmarkColor = Color.White
                                     )
                                 )
@@ -351,7 +351,7 @@ fun TransactionDetailDialog(
                                 }
                                 onSaveTag(finalTag, applyToAllForPayee)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(

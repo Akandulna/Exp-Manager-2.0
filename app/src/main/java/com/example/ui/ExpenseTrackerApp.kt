@@ -75,8 +75,8 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     label = { Text("Overview") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        selectedTextColor = Color(0xFF3B82F6),
-                        indicatorColor = Color(0xFF2563EB),
+                        selectedTextColor = Color(0xFFEF4444),
+                        indicatorColor = Color(0xFFDC2626),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -90,8 +90,8 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     label = { Text("Transactions") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        selectedTextColor = Color(0xFF3B82F6),
-                        indicatorColor = Color(0xFF2563EB),
+                        selectedTextColor = Color(0xFFEF4444),
+                        indicatorColor = Color(0xFFDC2626),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -105,8 +105,8 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                     label = { Text("Read PDF") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color.White,
-                        selectedTextColor = Color(0xFF3B82F6),
-                        indicatorColor = Color(0xFF2563EB),
+                        selectedTextColor = Color(0xFFEF4444),
+                        indicatorColor = Color(0xFFDC2626),
                         unselectedIconColor = Color(0xFF94A3B8),
                         unselectedTextColor = Color(0xFF94A3B8)
                     ),
@@ -121,7 +121,7 @@ fun ExpenseTrackerApp(viewModel: ExpenseViewModel) {
                         editingTransaction = null
                         showAddDialog = true
                     },
-                    containerColor = Color(0xFF3B82F6),
+                    containerColor = Color(0xFFEF4444),
                     contentColor = Color.White,
                     modifier = Modifier.testTag("fab_add_expense")
                 ) {
